@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Search,
@@ -15,7 +15,8 @@ import {
   Bug,
   Zap,
   TrendingUp,
-  Activity
+  Activity,
+  ArrowLeft
 } from 'lucide-react'
 import {
   LineChart,
@@ -33,135 +34,86 @@ import {
   Pie,
   Cell
 } from 'recharts'
-
-interface AnalysisData {
-  id: string
-  fileName: string
-  fileType: string
-  fileSize: string
-  uploadTime: Date
-  analysisTime: Date
-  status: 'completed' | 'processing' | 'failed'
-  threatLevel: 'low' | 'medium' | 'high' | 'critical'
-  summary: {
-    totalEvents: number
-    threatsDetected: number
-    iocsFound: number
-    patternsMatched: number
-    anomaliesDetected: number
-  }
-}
+import { analysisService } from '../services/analysisService'
+import { historyService } from '../services/historyService'
+import { useAnalysisById } from '../hooks/useAnalysis'
+import toast from 'react-hot-toast'
 
 const Analysis: React.FC = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
-  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
+  const [analysisData, setAnalysisData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data - replace with actual API call
+  // Use WebSocket hook for real-time updates if analysis is in progress
+  const liveAnalysis = useAnalysisById(id)
+
   useEffect(() => {
-    setTimeout(() => {
-      setAnalysisData({
-        id: id || 'sample_analysis',
-        fileName: 'system_logs_2024.log',
-        fileType: 'System Log',
-        fileSize: '2.4 MB',
-        uploadTime: new Date('2024-01-15T10:30:00'),
-        analysisTime: new Date('2024-01-15T10:32:15'),
-        status: 'completed',
-        threatLevel: 'medium',
-        summary: {
-          totalEvents: 15847,
-          threatsDetected: 23,
-          iocsFound: 12,
-          patternsMatched: 156,
-          anomaliesDetected: 8
-        }
-      })
-      setLoading(false)
-    }, 1000)
+    if (id) {
+      loadAnalysisData(id)
+    }
   }, [id])
+
+  const loadAnalysisData = async (analysisId: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Try to get from history first
+      const historyData = await historyService.getAnalysisDetails(analysisId)
+      if (historyData) {
+        setAnalysisData(historyData)
+      } else {
+        // If not in history, try to get current analysis results
+        const results = await analysisService.getAnalysisResults(analysisId)
+        setAnalysisData(results)
+      }
+    } catch (error: any) {
+      console.error('Failed to load analysis data:', error)
+      setError(error.message || 'Failed to load analysis data')
+      toast.error('Failed to load analysis data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const exportAnalysis = async (format: string) => {
+    if (!id) return
+    
+    try {
+      const data = await analysisService.exportAnalysis(id, format)
+      
+      // Create download link
+      const blob = new Blob([JSON.stringify(data, null, 2)], { 
+        type: format === 'json' ? 'application/json' : 'text/csv' 
+      })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `analysis_${id}.${format}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success(`Analysis exported as ${format.toUpperCase()}`)
+    } catch (error: any) {
+      console.error('Export failed:', error)
+      toast.error('Failed to export analysis')
+    }
+  }
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'events', label: 'Events Timeline', icon: Clock },
     { id: 'iocs', label: 'IOCs & Threats', icon: AlertTriangle },
     { id: 'patterns', label: 'Patterns', icon: Search },
-    { id: 'anomalies', label: 'Anomalies', icon: Bug },
-    { id: 'network', label: 'Network Analysis', icon: Network },
-  ]
-
-  const eventTimelineData = [
-    { time: '00:00', events: 45, threats: 2 },
-    { time: '04:00', events: 23, threats: 1 },
-    { time: '08:00', events: 156, threats: 8 },
-    { time: '12:00', events: 234, threats: 5 },
-    { time: '16:00', events: 189, threats: 4 },
-    { time: '20:00', events: 98, threats: 3 },
-  ]
-
-  const threatDistribution = [
-    { name: 'Malware', value: 35, color: '#ef4444' },
-    { name: 'Suspicious Activity', value: 28, color: '#f59e0b' },
-    { name: 'Network Anomaly', value: 20, color: '#3b82f6' },
-    { name: 'Policy Violation', value: 17, color: '#8b5cf6' },
-  ]
-
-  const recentEvents = [
-    {
-      id: 1,
-      timestamp: '2024-01-15 10:45:23',
-      severity: 'high',
-      type: 'Malware Detection',
-      description: 'Suspicious executable detected in system32 directory',
-      source: 'YARA Rule: Win32_Trojan_Generic',
-      details: 'File: svchost.exe, Hash: a1b2c3d4e5f6...'
-    },
-    {
-      id: 2,
-      timestamp: '2024-01-15 10:42:15',
-      severity: 'medium',
-      type: 'Network Anomaly',
-      description: 'Unusual outbound connection to suspicious domain',
-      source: 'Network Monitor',
-      details: 'Destination: malicious-domain.com:443'
-    },
-    {
-      id: 3,
-      timestamp: '2024-01-15 10:38:47',
-      severity: 'low',
-      type: 'Authentication',
-      description: 'Multiple failed login attempts detected',
-      source: 'Sigma Rule: Auth_Bruteforce',
-      details: 'User: admin, Source IP: 192.168.1.100'
-    }
-  ]
-
-  const iocData = [
-    {
-      type: 'IP Address',
-      value: '192.168.1.100',
-      threat: 'Brute Force Attack',
-      confidence: 85,
-      vtDetections: 12,
-      firstSeen: '2024-01-15 08:30:00'
-    },
-    {
-      type: 'Domain',
-      value: 'malicious-domain.com',
-      threat: 'C&C Server',
-      confidence: 92,
-      vtDetections: 28,
-      firstSeen: '2024-01-15 09:15:00'
-    },
-    {
-      type: 'File Hash',
-      value: 'a1b2c3d4e5f6789...',
-      threat: 'Trojan',
-      confidence: 98,
-      vtDetections: 45,
-      firstSeen: '2024-01-15 10:45:00'
-    }
+    { id: 'yara', label: 'YARA Results', icon: Shield },
+    { id: 'sigma', label: 'Sigma Results', icon: Bug },
+    { id: 'mitre', label: 'MITRE ATT&CK', icon: Network },
+    { id: 'ai', label: 'AI Insights', icon: Zap },
   ]
 
   const getSeverityColor = (severity: string) => {
@@ -202,6 +154,23 @@ const Analysis: React.FC = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-300 mb-2">Analysis Error</h3>
+        <p className="text-gray-400 mb-4">{error}</p>
+        <button
+          onClick={() => navigate('/history')}
+          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors mx-auto"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to History</span>
+        </button>
+      </div>
+    )
+  }
+
   if (!analysisData) {
     return (
       <div className="text-center py-12">
@@ -216,21 +185,36 @@ const Analysis: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Analysis Results</h1>
-          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-400">
-            <span>File: {analysisData.fileName}</span>
-            <span>•</span>
-            <span>Type: {analysisData.fileType}</span>
-            <span>•</span>
-            <span>Size: {analysisData.fileSize}</span>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate('/history')}
+            className="p-2 text-gray-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-white">Analysis Results</h1>
+            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-400">
+              <span>File: {analysisData.file_info?.filename || 'Unknown'}</span>
+              {analysisData.file_info?.file_size && (
+                <>
+                  <span>•</span>
+                  <span>Size: {(analysisData.file_info.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <div className={`px-3 py-1 rounded-lg text-sm font-medium ${getThreatLevelColor(analysisData.threatLevel)}`}>
-            Threat Level: {analysisData.threatLevel.toUpperCase()}
-          </div>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">
+          {analysisData.severity && (
+            <div className={`px-3 py-1 rounded-lg text-sm font-medium ${getThreatLevelColor(analysisData.severity)}`}>
+              Threat Level: {analysisData.severity.toUpperCase()}
+            </div>
+          )}
+          <button 
+            onClick={() => exportAnalysis('json')}
+            className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
+          >
             <Download className="w-4 h-4" />
             <span>Export</span>
           </button>
@@ -244,11 +228,36 @@ const Analysis: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { title: 'Total Events', value: analysisData.summary.totalEvents.toLocaleString(), icon: Activity, color: 'text-blue-400' },
-          { title: 'Threats Detected', value: analysisData.summary.threatsDetected.toString(), icon: AlertTriangle, color: 'text-red-400' },
-          { title: 'IOCs Found', value: analysisData.summary.iocsFound.toString(), icon: Eye, color: 'text-yellow-400' },
-          { title: 'Patterns Matched', value: analysisData.summary.patternsMatched.toString(), icon: Search, color: 'text-green-400' },
-          { title: 'Anomalies', value: analysisData.summary.anomaliesDetected.toString(), icon: Bug, color: 'text-purple-400' },
+          { 
+            title: 'Threat Score', 
+            value: analysisData.threat_score?.toString() || '0', 
+            icon: Activity, 
+            color: 'text-blue-400' 
+          },
+          { 
+            title: 'IOCs Found', 
+            value: analysisData.iocs?.length?.toString() || '0', 
+            icon: Eye, 
+            color: 'text-yellow-400' 
+          },
+          { 
+            title: 'YARA Matches', 
+            value: analysisData.yara_results?.length?.toString() || '0', 
+            icon: Shield, 
+            color: 'text-green-400' 
+          },
+          { 
+            title: 'Sigma Matches', 
+            value: analysisData.sigma_results?.length?.toString() || '0', 
+            icon: Bug, 
+            color: 'text-purple-400' 
+          },
+          { 
+            title: 'MITRE Techniques', 
+            value: analysisData.mitre_results?.techniques?.length?.toString() || '0', 
+            icon: Network, 
+            color: 'text-red-400' 
+          },
         ].map((stat, index) => {
           const Icon = stat.icon
           return (
@@ -274,14 +283,14 @@ const Analysis: React.FC = () => {
       {/* Tabs */}
       <div className="bg-slate-900/50 rounded-lg border border-slate-800">
         <div className="border-b border-slate-700">
-          <nav className="flex space-x-8 px-6">
+          <nav className="flex space-x-8 px-6 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-primary-500 text-primary-400'
                       : 'border-transparent text-gray-400 hover:text-gray-300'
@@ -299,106 +308,50 @@ const Analysis: React.FC = () => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Event Timeline */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Event Timeline</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={eventTimelineData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="time" stroke="#9ca3af" />
-                      <YAxis stroke="#9ca3af" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1f2937',
-                          border: '1px solid #374151',
-                          borderRadius: '8px',
-                          color: '#fff'
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="events"
-                        stroke="#3b82f6"
-                        fill="#3b82f6"
-                        fillOpacity={0.3}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="threats"
-                        stroke="#ef4444"
-                        fill="#ef4444"
-                        fillOpacity={0.3}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+              {/* Summary */}
+              {analysisData.summary && (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Analysis Summary</h3>
+                  <p className="text-gray-300">{analysisData.summary}</p>
                 </div>
+              )}
 
-                {/* Threat Distribution */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Threat Distribution</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={threatDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={120}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {threatDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1f2937',
-                          border: '1px solid #374151',
-                          borderRadius: '8px',
-                          color: '#fff'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Recent Events */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Recent Critical Events</h3>
-                <div className="space-y-3">
-                  {recentEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className={`p-4 rounded-lg border-l-4 ${
-                        event.severity === 'high' ? 'border-l-red-500 bg-red-900/10' :
-                        event.severity === 'medium' ? 'border-l-yellow-500 bg-yellow-900/10' :
-                        'border-l-blue-500 bg-blue-900/10'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <span className={`px-2 py-1 text-xs rounded-full ${getSeverityColor(event.severity)}`}>
-                              {event.severity.toUpperCase()}
-                            </span>
-                            <span className="text-sm font-medium text-white">{event.type}</span>
-                            <span className="text-xs text-gray-400">{event.timestamp}</span>
-                          </div>
-                          <p className="text-sm text-gray-300 mt-2">{event.description}</p>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-gray-500">{event.source}</span>
-                            <span className="text-xs text-gray-500">{event.details}</span>
-                          </div>
-                        </div>
+              {/* AI Insights */}
+              {analysisData.ai_insights && (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">AI Insights</h3>
+                  <div className="space-y-4">
+                    {analysisData.ai_insights.analysis && (
+                      <div>
+                        <h4 className="text-sm font-medium text-primary-400 mb-2">Analysis</h4>
+                        <p className="text-gray-300 text-sm">{analysisData.ai_insights.analysis}</p>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                    
+                    {analysisData.ai_insights.key_findings && analysisData.ai_insights.key_findings.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-primary-400 mb-2">Key Findings</h4>
+                        <ul className="list-disc list-inside space-y-1">
+                          {analysisData.ai_insights.key_findings.map((finding: string, index: number) => (
+                            <li key={index} className="text-gray-300 text-sm">{finding}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {analysisData.ai_insights.recommendations && analysisData.ai_insights.recommendations.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-primary-400 mb-2">Recommendations</h4>
+                        <ul className="list-disc list-inside space-y-1">
+                          {analysisData.ai_insights.recommendations.map((rec: string, index: number) => (
+                            <li key={index} className="text-gray-300 text-sm">{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -407,89 +360,131 @@ const Analysis: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white">Indicators of Compromise (IOCs)</h3>
-                <div className="flex items-center space-x-3">
-                  <button className="flex items-center space-x-2 px-3 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">
-                    <Filter className="w-4 h-4" />
-                    <span>Filter</span>
-                  </button>
-                  <button className="flex items-center space-x-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-                    <Download className="w-4 h-4" />
-                    <span>Export IOCs</span>
-                  </button>
-                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-700">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Value
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Threat
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Confidence
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        VT Detections
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        First Seen
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700">
-                    {iocData.map((ioc, index) => (
-                      <tr key={index} className="hover:bg-slate-800/50 transition-colors">
-                        <td className="px-4 py-4">
-                          <span className="px-2 py-1 bg-primary-900/30 text-primary-300 text-xs rounded">
-                            {ioc.type}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="text-sm text-white font-mono">{ioc.value}</span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="text-sm text-white">{ioc.threat}</span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-16 bg-slate-700 rounded-full h-2">
-                              <div
-                                className="bg-primary-500 h-2 rounded-full"
-                                style={{ width: `${ioc.confidence}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-white">{ioc.confidence}%</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            ioc.vtDetections > 20 ? 'bg-red-900/30 text-red-300' :
-                            ioc.vtDetections > 10 ? 'bg-yellow-900/30 text-yellow-300' :
-                            'bg-green-900/30 text-green-300'
-                          }`}>
-                            {ioc.vtDetections}/70
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="text-sm text-gray-400">{ioc.firstSeen}</span>
-                        </td>
+              {analysisData.iocs && analysisData.iocs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Type
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Value
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Context
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700">
+                      {analysisData.iocs.map((ioc: any, index: number) => (
+                        <tr key={index} className="hover:bg-slate-800/50 transition-colors">
+                          <td className="px-4 py-4">
+                            <span className="px-2 py-1 bg-primary-900/30 text-primary-300 text-xs rounded">
+                              {ioc.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="text-sm text-white font-mono">{ioc.value}</span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="text-sm text-gray-300">{ioc.context || 'N/A'}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Eye className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-400">No IOCs found in this analysis</p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Other tabs would be implemented similarly */}
-          {activeTab !== 'overview' && activeTab !== 'iocs' && (
+          {/* YARA Results Tab */}
+          {activeTab === 'yara' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-white">YARA Rule Matches</h3>
+              
+              {analysisData.yara_results && analysisData.yara_results.length > 0 ? (
+                <div className="space-y-4">
+                  {analysisData.yara_results.map((result: any, index: number) => (
+                    <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium text-white">{result.rule}</h4>
+                        <span className={`px-2 py-1 text-xs rounded ${getSeverityColor(result.severity || 'medium')}`}>
+                          {result.severity?.toUpperCase() || 'MEDIUM'}
+                        </span>
+                      </div>
+                      {result.meta?.description && (
+                        <p className="text-sm text-gray-300 mb-2">{result.meta.description}</p>
+                      )}
+                      <div className="flex items-center space-x-4 text-xs text-gray-400">
+                        <span>Matches: {result.matches || 1}</span>
+                        {result.meta?.author && <span>Author: {result.meta.author}</span>}
+                        {result.tags && result.tags.length > 0 && (
+                          <div className="flex space-x-1">
+                            {result.tags.map((tag: string, tagIndex: number) => (
+                              <span key={tagIndex} className="px-1 py-0.5 bg-slate-700 rounded text-xs">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-400">No YARA rule matches found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MITRE ATT&CK Tab */}
+          {activeTab === 'mitre' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-white">MITRE ATT&CK Techniques</h3>
+              
+              {analysisData.mitre_results?.techniques && analysisData.mitre_results.techniques.length > 0 ? (
+                <div className="space-y-4">
+                  {analysisData.mitre_results.techniques.map((technique: any, index: number) => (
+                    <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium text-white">
+                          {technique.technique_id}: {technique.technique_name}
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-400">
+                            Confidence: {Math.round((technique.confidence || 0) * 100)}%
+                          </span>
+                          <span className="px-2 py-1 bg-blue-900/30 text-blue-300 text-xs rounded">
+                            {technique.tactic}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-400">No MITRE ATT&CK techniques identified</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Other tabs would show "No data available" or implement based on available data */}
+          {!['overview', 'iocs', 'yara', 'mitre'].includes(activeTab) && (
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-300 mb-2">

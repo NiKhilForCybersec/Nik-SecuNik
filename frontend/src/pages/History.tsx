@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -12,116 +12,115 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react'
-
-interface AnalysisHistory {
-  id: string
-  fileName: string
-  fileType: string
-  fileSize: string
-  uploadTime: Date
-  analysisTime: Date
-  status: 'completed' | 'processing' | 'failed'
-  threatLevel: 'low' | 'medium' | 'high' | 'critical'
-  threatsFound: number
-  iocsDetected: number
-  duration: string
-}
+import { historyService } from '../services/historyService'
+import toast from 'react-hot-toast'
 
 const History: React.FC = () => {
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [threatFilter, setThreatFilter] = useState<string>('all')
+  const [severityFilter, setSeverityFilter] = useState<string>('all')
+  const [historyData, setHistoryData] = useState<any[]>([])
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState({
+    limit: 20,
+    offset: 0,
+    total: 0,
+    hasMore: false
+  })
 
-  // Mock data - replace with actual API call
-  const historyData: AnalysisHistory[] = [
-    {
-      id: 'analysis_001',
-      fileName: 'system_logs_2024.log',
-      fileType: 'System Log',
-      fileSize: '2.4 MB',
-      uploadTime: new Date('2024-01-15T10:30:00'),
-      analysisTime: new Date('2024-01-15T10:32:15'),
-      status: 'completed',
-      threatLevel: 'medium',
-      threatsFound: 23,
-      iocsDetected: 12,
-      duration: '2m 15s'
-    },
-    {
-      id: 'analysis_002',
-      fileName: 'network_capture.pcap',
-      fileType: 'Network Capture',
-      fileSize: '15.7 MB',
-      uploadTime: new Date('2024-01-15T09:15:00'),
-      analysisTime: new Date('2024-01-15T09:18:45'),
-      status: 'completed',
-      threatLevel: 'high',
-      threatsFound: 45,
-      iocsDetected: 28,
-      duration: '3m 45s'
-    },
-    {
-      id: 'analysis_003',
-      fileName: 'email_archive.mbox',
-      fileType: 'Email Archive',
-      fileSize: '8.2 MB',
-      uploadTime: new Date('2024-01-15T08:45:00'),
-      analysisTime: new Date('2024-01-15T08:47:30'),
-      status: 'completed',
-      threatLevel: 'low',
-      threatsFound: 3,
-      iocsDetected: 1,
-      duration: '2m 30s'
-    },
-    {
-      id: 'analysis_004',
-      fileName: 'suspicious_binary.exe',
-      fileType: 'Executable',
-      fileSize: '1.2 MB',
-      uploadTime: new Date('2024-01-15T07:20:00'),
-      analysisTime: new Date('2024-01-15T07:25:15'),
-      status: 'completed',
-      threatLevel: 'critical',
-      threatsFound: 67,
-      iocsDetected: 34,
-      duration: '5m 15s'
-    },
-    {
-      id: 'analysis_005',
-      fileName: 'large_dataset.zip',
-      fileType: 'Archive',
-      fileSize: '45.8 MB',
-      uploadTime: new Date('2024-01-15T06:30:00'),
-      analysisTime: new Date('2024-01-15T06:30:00'),
-      status: 'processing',
-      threatLevel: 'low',
-      threatsFound: 0,
-      iocsDetected: 0,
-      duration: '15m 30s'
-    },
-    {
-      id: 'analysis_006',
-      fileName: 'corrupted_file.dat',
-      fileType: 'Unknown',
-      fileSize: '0.5 MB',
-      uploadTime: new Date('2024-01-15T05:45:00'),
-      analysisTime: new Date('2024-01-15T05:45:30'),
-      status: 'failed',
-      threatLevel: 'low',
-      threatsFound: 0,
-      iocsDetected: 0,
-      duration: '30s'
+  useEffect(() => {
+    loadHistoryData()
+    loadStats()
+  }, [])
+
+  useEffect(() => {
+    loadHistoryData()
+  }, [searchTerm, statusFilter, severityFilter, pagination.offset])
+
+  const loadHistoryData = async () => {
+    try {
+      setLoading(true)
+      
+      const filters: any = {
+        limit: pagination.limit,
+        offset: pagination.offset
+      }
+      
+      if (searchTerm) filters.search = searchTerm
+      if (severityFilter !== 'all') filters.severity = severityFilter
+      
+      const response = await historyService.getHistory(filters)
+      
+      setHistoryData(response.items || [])
+      setPagination(prev => ({
+        ...prev,
+        total: response.total || 0,
+        hasMore: (response.offset || 0) + (response.items?.length || 0) < (response.total || 0)
+      }))
+      
+    } catch (error: any) {
+      console.error('Failed to load history:', error)
+      toast.error('Failed to load analysis history')
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+  const loadStats = async () => {
+    try {
+      const statsData = await historyService.getHistoryStats(30)
+      setStats(statsData)
+    } catch (error: any) {
+      console.error('Failed to load stats:', error)
+    }
+  }
+
+  const deleteAnalysis = async (analysisId: string) => {
+    if (!confirm('Are you sure you want to delete this analysis?')) return
+    
+    try {
+      await historyService.deleteAnalysis(analysisId)
+      toast.success('Analysis deleted successfully')
+      loadHistoryData() // Reload data
+    } catch (error: any) {
+      console.error('Failed to delete analysis:', error)
+      toast.error('Failed to delete analysis')
+    }
+  }
+
+  const exportHistory = async () => {
+    try {
+      const data = await historyService.exportHistory('json')
+      
+      // Create download link
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `analysis_history_${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success('History exported successfully')
+    } catch (error: any) {
+      console.error('Export failed:', error)
+      toast.error('Failed to export history')
+    }
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
         return <CheckCircle className="w-5 h-5 text-success-400" />
       case 'processing':
+      case 'analyzing':
         return <Clock className="w-5 h-5 text-warning-400 animate-spin" />
       case 'failed':
         return <XCircle className="w-5 h-5 text-danger-400" />
@@ -145,22 +144,20 @@ const History: React.FC = () => {
     }
   }
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString()
   }
 
   const filteredData = historyData.filter(item => {
-    const matchesSearch = item.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.fileType.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter
-    const matchesThreat = threatFilter === 'all' || item.threatLevel === threatFilter
-    return matchesSearch && matchesStatus && matchesThreat
+    const matchesSearch = item.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.id?.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesSearch
   })
 
-  const stats = [
+  const statsData = stats ? [
     {
       title: 'Total Analyses',
-      value: historyData.length.toString(),
+      value: stats.total_analyses?.toString() || '0',
       icon: FileText,
       color: 'text-primary-400'
     },
@@ -172,17 +169,17 @@ const History: React.FC = () => {
     },
     {
       title: 'High Risk Files',
-      value: historyData.filter(h => h.threatLevel === 'high' || h.threatLevel === 'critical').length.toString(),
+      value: stats.by_severity ? (stats.by_severity.high + stats.by_severity.critical).toString() : '0',
       icon: AlertTriangle,
       color: 'text-danger-400'
     },
     {
       title: 'Total Threats',
-      value: historyData.reduce((sum, h) => sum + h.threatsFound, 0).toString(),
+      value: stats.total_threats_found?.toString() || '0',
       icon: Eye,
       color: 'text-warning-400'
     }
-  ]
+  ] : []
 
   return (
     <div className="space-y-6">
@@ -195,7 +192,17 @@ const History: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">
+          <button 
+            onClick={loadHistoryData}
+            className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </button>
+          <button 
+            onClick={exportHistory}
+            className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
+          >
             <Download className="w-4 h-4" />
             <span>Export History</span>
           </button>
@@ -204,7 +211,7 @@ const History: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
+        {statsData.map((stat, index) => {
           const Icon = stat.icon
           return (
             <motion.div
@@ -234,7 +241,7 @@ const History: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search files..."
+                placeholder="Search analyses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64"
@@ -242,19 +249,8 @@ const History: React.FC = () => {
             </div>
             
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">All Status</option>
-              <option value="completed">Completed</option>
-              <option value="processing">Processing</option>
-              <option value="failed">Failed</option>
-            </select>
-            
-            <select
-              value={threatFilter}
-              onChange={(e) => setThreatFilter(e.target.value)}
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
               className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="all">All Threat Levels</option>
@@ -267,124 +263,136 @@ const History: React.FC = () => {
           
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-400">Last 30 days</span>
+            <span className="text-sm text-gray-400">Showing last 30 days</span>
           </div>
         </div>
       </div>
 
       {/* History Table */}
       <div className="bg-slate-900/50 rounded-lg border border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700 bg-slate-800/50">
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  File
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Threat Level
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Threats
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  IOCs
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {filteredData.map((item, index) => (
-                <motion.tr
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="hover:bg-slate-800/50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-white">{item.fileName}</div>
-                      <div className="text-sm text-gray-400">{item.fileType} • {item.fileSize}</div>
-                    </div>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(item.status)}
-                      <span className="text-sm text-white capitalize">{item.status}</span>
-                    </div>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getThreatLevelColor(item.threatLevel)}`}>
-                      {item.threatLevel.toUpperCase()}
-                    </span>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-white">{item.threatsFound}</span>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-white">{item.iocsDetected}</span>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-400">{item.duration}</span>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-400">
-                      {formatDate(item.uploadTime)}
-                    </div>
-                  </td>
-                  
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      {item.status === 'completed' && (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700 bg-slate-800/50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    File
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Threat Level
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Threat Score
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    IOCs
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700">
+                {filteredData.map((item, index) => (
+                  <motion.tr
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="hover:bg-slate-800/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="text-sm font-medium text-white">{item.file_name || 'Unknown'}</div>
+                        <div className="text-sm text-gray-400">ID: {item.id}</div>
+                      </div>
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 text-xs rounded-full ${getThreatLevelColor(item.severity || 'low')}`}>
+                        {(item.severity || 'low').toUpperCase()}
+                      </span>
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-white">{item.threat_score || 0}</span>
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-white">{item.iocs_found || 0}</span>
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-400">
+                        {formatDate(item.analysis_date)}
+                      </div>
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
                         <button
                           onClick={() => navigate(`/analysis/${item.id}`)}
                           className="text-primary-400 hover:text-primary-300 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                      )}
-                      <button className="text-gray-400 hover:text-white transition-colors">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button className="text-gray-400 hover:text-red-400 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        <button 
+                          onClick={() => deleteAnalysis(item.id)}
+                          className="text-gray-400 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {filteredData.length === 0 && (
+        {!loading && filteredData.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-300 mb-2">No analyses found</h3>
             <p className="text-gray-400">
-              {searchTerm || statusFilter !== 'all' || threatFilter !== 'all'
+              {searchTerm || severityFilter !== 'all'
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Upload your first file to start analyzing.'
               }
             </p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.total > pagination.limit && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-700">
+            <div className="text-sm text-gray-400">
+              Showing {pagination.offset + 1} to {Math.min(pagination.offset + pagination.limit, pagination.total)} of {pagination.total} results
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setPagination(prev => ({ ...prev, offset: Math.max(0, prev.offset - prev.limit) }))}
+                disabled={pagination.offset === 0}
+                className="px-3 py-1 bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPagination(prev => ({ ...prev, offset: prev.offset + prev.limit }))}
+                disabled={!pagination.hasMore}
+                className="px-3 py-1 bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

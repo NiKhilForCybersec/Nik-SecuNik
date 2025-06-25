@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
+import { useNavigate } from 'react-router-dom'
 import {
   Upload as UploadIcon,
   File,
@@ -15,22 +16,25 @@ import {
   Code,
   Wifi,
   Mail,
-  Shield
+  Shield,
+  Play
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { uploadService } from '../services/uploadService'
+import { analysisService } from '../services/analysisService'
 
 interface UploadedFile {
   id: string
   file: File
-  status: 'uploading' | 'analyzing' | 'completed' | 'error'
+  status: 'uploading' | 'uploaded' | 'parsing' | 'parsed' | 'analyzing' | 'completed' | 'error'
   progress: number
-  type: string
-  size: string
+  uploadResult?: any
   analysisId?: string
   error?: string
 }
 
 const Upload: React.FC = () => {
+  const navigate = useNavigate()
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [dragActive, setDragActive] = useState(false)
 
@@ -106,59 +110,97 @@ const Upload: React.FC = () => {
     return typeMap[extension || ''] || 'Unknown'
   }
 
-  const simulateUploadAndAnalysis = (fileId: string) => {
-    // Simulate upload progress
-    let progress = 0
-    const uploadInterval = setInterval(() => {
-      progress += Math.random() * 20
-      if (progress >= 100) {
-        progress = 100
-        clearInterval(uploadInterval)
-        
-        // Start analysis phase
+  const uploadAndAnalyzeFile = async (fileId: string) => {
+    const fileIndex = uploadedFiles.findIndex(f => f.id === fileId)
+    if (fileIndex === -1) return
+
+    const uploadedFile = uploadedFiles[fileIndex]
+    
+    try {
+      // Upload file
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'uploading', progress: 0 }
+          : f
+      ))
+
+      const uploadResult = await uploadService.uploadFile(uploadedFile.file, {
+        autoAnalyze: false,
+        tags: ['frontend-upload'],
+        onProgress: (progress) => {
+          setUploadedFiles(prev => prev.map(f => 
+            f.id === fileId 
+              ? { ...f, progress }
+              : f
+          ))
+        }
+      })
+
+      // Update with upload result
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'uploaded', progress: 100, uploadResult }
+          : f
+      ))
+
+      // Wait for parsing if needed
+      if (uploadResult.status === 'parsing') {
         setUploadedFiles(prev => prev.map(f => 
           f.id === fileId 
-            ? { ...f, status: 'analyzing', progress: 0 }
+            ? { ...f, status: 'parsing' }
             : f
         ))
-        
-        // Simulate analysis
-        let analysisProgress = 0
-        const analysisInterval = setInterval(() => {
-          analysisProgress += Math.random() * 15
-          if (analysisProgress >= 100) {
-            analysisProgress = 100
-            clearInterval(analysisInterval)
-            
-            // Complete analysis
+
+        // Poll for parsing completion
+        let parseComplete = false
+        while (!parseComplete) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          const status = await uploadService.getUploadStatus(uploadResult.id)
+          
+          if (status.status === 'parsed') {
+            parseComplete = true
             setUploadedFiles(prev => prev.map(f => 
               f.id === fileId 
-                ? { 
-                    ...f, 
-                    status: 'completed', 
-                    progress: 100,
-                    analysisId: `analysis_${Date.now()}`
-                  }
+                ? { ...f, status: 'parsed' }
                 : f
             ))
-            
-            toast.success('File analysis completed!')
-          } else {
-            setUploadedFiles(prev => prev.map(f => 
-              f.id === fileId 
-                ? { ...f, progress: analysisProgress }
-                : f
-            ))
+          } else if (status.status === 'failed') {
+            throw new Error(status.message || 'Parsing failed')
           }
-        }, 500)
-      } else {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileId 
-            ? { ...f, progress }
-            : f
-        ))
+        }
       }
-    }, 300)
+
+      // Start analysis
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'analyzing' }
+          : f
+      ))
+
+      const analysisResult = await analysisService.startAnalysis(uploadResult.id, {
+        analyzers: ['yara', 'sigma', 'mitre', 'ai', 'patterns'],
+        deepScan: true,
+        extractIocs: true,
+        checkVirusTotal: true
+      })
+
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, analysisId: analysisResult.analysis_id }
+          : f
+      ))
+
+      toast.success('File uploaded and analysis started!')
+
+    } catch (error: any) {
+      console.error('Upload/Analysis error:', error)
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'error', error: error.message }
+          : f
+      ))
+      toast.error(error.message || 'Upload failed')
+    }
   }
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -166,25 +208,23 @@ const Upload: React.FC = () => {
       id: `${Date.now()}_${Math.random()}`,
       file,
       status: 'uploading',
-      progress: 0,
-      type: getFileType(file.name),
-      size: formatFileSize(file.size)
+      progress: 0
     }))
 
     setUploadedFiles(prev => [...prev, ...newFiles])
     
-    // Start upload simulation for each file
+    // Start upload and analysis for each file
     newFiles.forEach(file => {
-      simulateUploadAndAnalysis(file.id)
+      uploadAndAnalyzeFile(file.id)
     })
 
-    toast.success(`${acceptedFiles.length} file(s) uploaded successfully!`)
+    toast.success(`${acceptedFiles.length} file(s) queued for upload and analysis!`)
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-    maxSize: 100 * 1024 * 1024, // 100MB
+    maxSize: 1073741824, // 1GB
     onDragEnter: () => setDragActive(true),
     onDragLeave: () => setDragActive(false),
   })
@@ -194,12 +234,22 @@ const Upload: React.FC = () => {
     toast.success('File removed')
   }
 
+  const viewAnalysis = (analysisId: string) => {
+    navigate(`/analysis/${analysisId}`)
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'uploading':
         return <Clock className="w-5 h-5 text-blue-400 animate-spin" />
-      case 'analyzing':
+      case 'uploaded':
+        return <CheckCircle className="w-5 h-5 text-green-400" />
+      case 'parsing':
         return <Clock className="w-5 h-5 text-yellow-400 animate-spin" />
+      case 'parsed':
+        return <CheckCircle className="w-5 h-5 text-green-400" />
+      case 'analyzing':
+        return <Clock className="w-5 h-5 text-purple-400 animate-spin" />
       case 'completed':
         return <CheckCircle className="w-5 h-5 text-green-400" />
       case 'error':
@@ -213,10 +263,16 @@ const Upload: React.FC = () => {
     switch (status) {
       case 'uploading':
         return 'Uploading...'
+      case 'uploaded':
+        return 'Uploaded'
+      case 'parsing':
+        return 'Parsing...'
+      case 'parsed':
+        return 'Parsed'
       case 'analyzing':
         return 'Analyzing...'
       case 'completed':
-        return 'Completed'
+        return 'Analysis Complete'
       case 'error':
         return 'Error'
       default:
@@ -239,7 +295,7 @@ const Upload: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold text-white">Upload Files</h1>
         <p className="text-gray-400 mt-2">
-          Upload files for comprehensive cybersecurity analysis and threat detection
+          Upload files for comprehensive cybersecurity analysis using SecuNik LogX
         </p>
       </div>
 
@@ -260,7 +316,7 @@ const Upload: React.FC = () => {
             {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
           </h3>
           <p className="text-gray-400 mb-4">
-            or click to browse and select files
+            or click to browse and select files for analysis
           </p>
           <div className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
             <UploadIcon className="w-4 h-4 mr-2" />
@@ -313,17 +369,28 @@ const Upload: React.FC = () => {
                     <h4 className="text-sm font-medium text-white truncate">
                       {uploadedFile.file.name}
                     </h4>
-                    <button
-                      onClick={() => removeFile(uploadedFile.id)}
-                      className="text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      {uploadedFile.analysisId && uploadedFile.status === 'completed' && (
+                        <button
+                          onClick={() => viewAnalysis(uploadedFile.analysisId!)}
+                          className="flex items-center space-x-1 px-2 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700 transition-colors"
+                        >
+                          <Play className="w-3 h-3" />
+                          <span>View Analysis</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeFile(uploadedFile.id)}
+                        className="text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="flex items-center space-x-4 mt-1">
-                    <span className="text-xs text-gray-400">{uploadedFile.type}</span>
-                    <span className="text-xs text-gray-400">{uploadedFile.size}</span>
+                    <span className="text-xs text-gray-400">{getFileType(uploadedFile.file.name)}</span>
+                    <span className="text-xs text-gray-400">{formatFileSize(uploadedFile.file.size)}</span>
                   </div>
                   
                   <div className="flex items-center space-x-3 mt-2">
@@ -332,7 +399,7 @@ const Upload: React.FC = () => {
                       {getStatusText(uploadedFile.status)}
                     </span>
                     
-                    {uploadedFile.status !== 'completed' && (
+                    {uploadedFile.status === 'uploading' && (
                       <div className="flex-1 bg-slate-700 rounded-full h-2">
                         <motion.div
                           className="bg-primary-500 h-2 rounded-full"
@@ -343,10 +410,8 @@ const Upload: React.FC = () => {
                       </div>
                     )}
                     
-                    {uploadedFile.status === 'completed' && uploadedFile.analysisId && (
-                      <button className="text-xs text-primary-400 hover:text-primary-300 transition-colors">
-                        View Analysis →
-                      </button>
+                    {uploadedFile.error && (
+                      <span className="text-xs text-red-400">{uploadedFile.error}</span>
                     )}
                   </div>
                 </div>
@@ -363,7 +428,7 @@ const Upload: React.FC = () => {
           <div>
             <h4 className="text-sm font-medium text-primary-400 mb-2">File Requirements</h4>
             <ul className="text-sm text-gray-400 space-y-1">
-              <li>• Maximum file size: 100MB</li>
+              <li>• Maximum file size: 1GB</li>
               <li>• Multiple files supported</li>
               <li>• Compressed archives will be extracted</li>
               <li>• Binary files will be analyzed for malware</li>
@@ -374,10 +439,10 @@ const Upload: React.FC = () => {
             <ul className="text-sm text-gray-400 space-y-1">
               <li>• YARA rule matching</li>
               <li>• Sigma rule detection</li>
+              <li>• MITRE ATT&CK mapping</li>
+              <li>• AI-powered analysis</li>
               <li>• IOC extraction</li>
               <li>• VirusTotal integration</li>
-              <li>• AI-powered analysis</li>
-              <li>• Pattern recognition</li>
             </ul>
           </div>
         </div>

@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // API Configuration
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/api/ws'
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
 
 // Create axios instance
 const apiClient = axios.create({
@@ -32,7 +32,6 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Handle token expiration
       localStorage.removeItem('access_token')
-      // Could redirect to login if auth is enabled
       console.warn('Authentication token expired')
     }
     return Promise.reject(error)

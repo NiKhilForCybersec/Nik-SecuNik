@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Settings as SettingsIcon,
@@ -41,13 +41,13 @@ const Settings: React.FC = () => {
       systemMaintenance: true
     },
     integrations: {
-      virusTotalApiKey: 'vt_api_key_hidden',
-      openaiApiKey: 'openai_api_key_hidden',
+      virusTotalApiKey: '',
+      openaiApiKey: '',
       slackWebhook: '',
       syslogServer: '192.168.1.100:514'
     },
     analysis: {
-      maxFileSize: 100,
+      maxFileSize: 1024, // 1GB in MB
       retentionPeriod: 90,
       autoAnalysis: true,
       deepScan: false,
@@ -64,11 +64,12 @@ const Settings: React.FC = () => {
   ]
 
   const handleSave = () => {
-    // Simulate API call
+    // In a real app, this would save to the backend
     toast.success('Settings saved successfully!')
   }
 
   const handleReset = () => {
+    // Reset to default values
     toast.success('Settings reset to defaults!')
   }
 
@@ -212,177 +213,6 @@ const Settings: React.FC = () => {
               </motion.div>
             )}
 
-            {/* Security Settings */}
-            {activeTab === 'security' && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-6"
-              >
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Security Settings</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">
-                          Session Timeout (minutes)
-                        </label>
-                        <input
-                          type="number"
-                          value={settings.security.sessionTimeout}
-                          onChange={(e) => updateSetting('security', 'sessionTimeout', parseInt(e.target.value))}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">
-                          API Key Rotation (days)
-                        </label>
-                        <input
-                          type="number"
-                          value={settings.security.apiKeyRotation}
-                          onChange={(e) => updateSetting('security', 'apiKeyRotation', parseInt(e.target.value))}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
-                        <div>
-                          <h4 className="text-sm font-medium text-white">Multi-Factor Authentication</h4>
-                          <p className="text-xs text-gray-400 mt-1">Require MFA for all user logins</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={settings.security.mfaEnabled}
-                            onChange={(e) => updateSetting('security', 'mfaEnabled', e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Notifications Settings */}
-            {activeTab === 'notifications' && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-6"
-              >
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Notification Settings</h3>
-                  
-                  <div className="space-y-4">
-                    {[
-                      { key: 'emailAlerts', label: 'Email Alerts', description: 'Receive email notifications for security events' },
-                      { key: 'criticalThreats', label: 'Critical Threat Alerts', description: 'Immediate notifications for critical threats' },
-                      { key: 'weeklyReports', label: 'Weekly Reports', description: 'Weekly summary reports via email' },
-                      { key: 'systemMaintenance', label: 'System Maintenance', description: 'Notifications about system updates and maintenance' },
-                    ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
-                        <div>
-                          <h4 className="text-sm font-medium text-white">{item.label}</h4>
-                          <p className="text-xs text-gray-400 mt-1">{item.description}</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={settings.notifications[item.key as keyof typeof settings.notifications] as boolean}
-                            onChange={(e) => updateSetting('notifications', item.key, e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Integrations Settings */}
-            {activeTab === 'integrations' && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-6"
-              >
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Integration Settings</h3>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        VirusTotal API Key
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showApiKey ? 'text' : 'password'}
-                          value={settings.integrations.virusTotalApiKey}
-                          onChange={(e) => updateSetting('integrations', 'virusTotalApiKey', e.target.value)}
-                          className="w-full px-3 py-2 pr-10 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowApiKey(!showApiKey)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
-                        >
-                          {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        OpenAI API Key
-                      </label>
-                      <input
-                        type="password"
-                        value={settings.integrations.openaiApiKey}
-                        onChange={(e) => updateSetting('integrations', 'openaiApiKey', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        Slack Webhook URL
-                      </label>
-                      <input
-                        type="url"
-                        value={settings.integrations.slackWebhook}
-                        onChange={(e) => updateSetting('integrations', 'slackWebhook', e.target.value)}
-                        placeholder="https://hooks.slack.com/services/..."
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        Syslog Server
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.integrations.syslogServer}
-                        onChange={(e) => updateSetting('integrations', 'syslogServer', e.target.value)}
-                        placeholder="192.168.1.100:514"
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
             {/* Analysis Settings */}
             {activeTab === 'analysis' && (
               <motion.div
@@ -405,6 +235,7 @@ const Settings: React.FC = () => {
                           onChange={(e) => updateSetting('analysis', 'maxFileSize', parseInt(e.target.value))}
                           className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
+                        <p className="text-xs text-gray-500 mt-1">Maximum file size for uploads (1GB = 1024MB)</p>
                       </div>
                       
                       <div>
@@ -445,6 +276,99 @@ const Settings: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </motion.div>
+            )}
+
+            {/* Integrations Settings */}
+            {activeTab === 'integrations' && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Integration Settings</h3>
+                  
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        VirusTotal API Key
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showApiKey ? 'text' : 'password'}
+                          value={settings.integrations.virusTotalApiKey}
+                          onChange={(e) => updateSetting('integrations', 'virusTotalApiKey', e.target.value)}
+                          placeholder="Enter your VirusTotal API key"
+                          className="w-full px-3 py-2 pr-10 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                        >
+                          {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        OpenAI API Key
+                      </label>
+                      <input
+                        type="password"
+                        value={settings.integrations.openaiApiKey}
+                        onChange={(e) => updateSetting('integrations', 'openaiApiKey', e.target.value)}
+                        placeholder="Enter your OpenAI API key"
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        Slack Webhook URL
+                      </label>
+                      <input
+                        type="url"
+                        value={settings.integrations.slackWebhook}
+                        onChange={(e) => updateSetting('integrations', 'slackWebhook', e.target.value)}
+                        placeholder="https://hooks.slack.com/services/..."
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        Syslog Server
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.integrations.syslogServer}
+                        onChange={(e) => updateSetting('integrations', 'syslogServer', e.target.value)}
+                        placeholder="192.168.1.100:514"
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Other tabs show placeholder */}
+            {!['general', 'analysis', 'integrations'].includes(activeTab) && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-center py-12"
+              >
+                <SettingsIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-300 mb-2">
+                  {tabs.find(t => t.id === activeTab)?.label} Settings
+                </h3>
+                <p className="text-gray-400">
+                  Settings for {activeTab} will be available here.
+                </p>
               </motion.div>
             )}
           </div>

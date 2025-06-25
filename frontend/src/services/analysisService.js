@@ -1,17 +1,15 @@
 import apiClient from './api'
 
 export const analysisService = {
-  // Start analysis
-  async startAnalysis(fileId, options = {}) {
+  // Start analysis using /api/analyze/{upload_id}
+  async startAnalysis(uploadId, options = {}) {
     try {
-      const response = await apiClient.post('/analysis/start', {
-        file_id: fileId,
-        analyzers: options.analyzers || ['yara', 'sigma', 'mitre', 'ai'],
-        priority: options.priority || 'normal',
+      const response = await apiClient.post(`/analyze/${uploadId}`, {
+        analyzers: options.analyzers || ['yara', 'sigma', 'mitre', 'ai', 'patterns'],
         options: {
           deep_scan: options.deepScan || true,
           extract_iocs: options.extractIocs || true,
-          correlation: options.correlation || true,
+          check_virustotal: options.checkVirusTotal || true,
           ...options.analysisOptions
         }
       })
@@ -21,30 +19,42 @@ export const analysisService = {
     }
   },
 
-  // Check analysis status
+  // Check analysis status using /api/analyze/status/{analysis_id}
   async getAnalysisStatus(analysisId) {
     try {
-      const response = await apiClient.get(`/analysis/${analysisId}/status`)
+      const response = await apiClient.get(`/analyze/status/${analysisId}`)
       return response.data
     } catch (error) {
       throw this.handleError(error)
     }
   },
 
-  // Get analysis results
+  // Get analysis results using /api/analyze/result/{analysis_id}
   async getAnalysisResults(analysisId) {
     try {
-      const response = await apiClient.get(`/analysis/${analysisId}/results`)
+      const response = await apiClient.get(`/analyze/result/${analysisId}`)
       return response.data
     } catch (error) {
       throw this.handleError(error)
     }
   },
 
-  // Cancel analysis
+  // Cancel analysis using /api/analyze/cancel/{analysis_id}
   async cancelAnalysis(analysisId) {
     try {
-      const response = await apiClient.post(`/analysis/${analysisId}/cancel`)
+      const response = await apiClient.post(`/analyze/cancel/${analysisId}`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
+
+  // Export analysis report
+  async exportAnalysis(analysisId, format = 'json') {
+    try {
+      const response = await apiClient.get(`/analyze/export/${analysisId}?format=${format}`, {
+        responseType: format === 'pdf' ? 'blob' : 'json'
+      })
       return response.data
     } catch (error) {
       throw this.handleError(error)
@@ -54,15 +64,18 @@ export const analysisService = {
   handleError(error) {
     if (error.response?.data) {
       return {
-        error: error.response.data.error || 'Analysis failed',
-        message: error.response.data.message || 'An error occurred during analysis',
-        details: error.response.data.details || {}
+        error: error.response.data.detail?.message || 'Analysis failed',
+        message: error.response.data.detail?.message || 'An error occurred during analysis',
+        error_code: error.response.data.detail?.error_code,
+        status_code: error.response.status,
+        details: error.response.data.detail?.details || {}
       }
     }
     return {
       error: 'NetworkError',
       message: 'Failed to connect to server',
-      details: {}
+      status_code: 0,
+      type: 'network_error'
     }
   }
 }

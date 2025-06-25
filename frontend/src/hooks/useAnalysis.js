@@ -8,16 +8,16 @@ export const useAnalysis = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const startAnalysis = useCallback(async (fileId, options = {}) => {
+  const startAnalysis = useCallback(async (uploadId, options = {}) => {
     setLoading(true)
     setError(null)
 
     try {
-      const result = await analysisService.startAnalysis(fileId, options)
+      const result = await analysisService.startAnalysis(uploadId, options)
       
       setAnalyses(prev => new Map(prev).set(result.analysis_id, {
         ...result,
-        status: 'queued',
+        status: 'started',
         progress: 0,
         results: null
       }))
@@ -105,22 +105,50 @@ export const useAnalysis = () => {
         const updatedAnalysis = { ...existing }
         
         switch (data.type) {
+          case 'analysis_started':
+            updatedAnalysis.status = 'analyzing'
+            updatedAnalysis.progress = 0
+            break
+            
           case 'analysis_progress':
             updatedAnalysis.progress = data.progress
-            updatedAnalysis.current_step = data.current_step
-            updatedAnalysis.status = 'processing'
+            updatedAnalysis.current_stage = data.current_stage
+            updatedAnalysis.status = 'analyzing'
             break
-          case 'analysis_complete':
+            
+          case 'stage_completed':
+            if (!updatedAnalysis.stages_completed) {
+              updatedAnalysis.stages_completed = []
+            }
+            updatedAnalysis.stages_completed.push(data.stage)
+            break
+            
+          case 'analysis_completed':
             updatedAnalysis.status = 'completed'
             updatedAnalysis.progress = 100
-            updatedAnalysis.threat_score = data.threat_score
-            updatedAnalysis.severity = data.severity
+            updatedAnalysis.results = data.results
             toast.success('Analysis completed successfully')
             break
-          case 'analysis_error':
+            
+          case 'analysis_failed':
             updatedAnalysis.status = 'failed'
-            updatedAnalysis.error = data.message
-            toast.error(`Analysis failed: ${data.message}`)
+            updatedAnalysis.error = data.error
+            toast.error(`Analysis failed: ${data.error}`)
+            break
+            
+          case 'threat_detected':
+            if (!updatedAnalysis.threats_detected) {
+              updatedAnalysis.threats_detected = []
+            }
+            updatedAnalysis.threats_detected.push(data.threat)
+            toast.warning(`Threat detected: ${data.threat.type}`)
+            break
+            
+          case 'ioc_found':
+            if (!updatedAnalysis.iocs_found) {
+              updatedAnalysis.iocs_found = []
+            }
+            updatedAnalysis.iocs_found.push(data.ioc)
             break
         }
         
