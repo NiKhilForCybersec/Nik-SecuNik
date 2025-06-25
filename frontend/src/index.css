@@ -18,6 +18,11 @@
     --scrollbar-thumb-hover: #4b5563;
   }
 
+  /* Base styles */
+  * {
+    @apply border-border;
+  }
+
   html {
     @apply scroll-smooth;
   }
@@ -128,7 +133,31 @@
     }
   }
 
-  /* Cyber button styles are handled in tailwind config */
+  /* Cyber button styles */
+  .btn-cyber-primary {
+    @apply relative px-6 py-2.5 bg-cyber-600 text-white font-medium rounded-lg overflow-hidden transition-all duration-300 hover:bg-cyber-700 hover:shadow-lg hover:shadow-cyber-500/25 active:scale-95;
+  }
+
+  .btn-cyber-primary::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700;
+  }
+
+  .btn-cyber-primary:hover::before {
+    @apply translate-x-full;
+  }
+
+  /* Cyber input styles */
+  .input-cyber {
+    @apply bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 transition-all duration-200;
+    @apply focus:border-cyber-500 focus:ring-2 focus:ring-cyber-500/20 focus:bg-gray-900;
+  }
+
+  /* Cyber card styles */
+  .card-cyber {
+    @apply bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-lg p-6 transition-all duration-300;
+    @apply hover:border-cyber-500/50 hover:shadow-lg hover:shadow-cyber-500/10;
+  }
 
   /* Glitch effect */
   .glitch {
@@ -249,7 +278,10 @@
     scrollbar-width: none;
   }
 
-  /* Text gradient is handled in tailwind config */
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-cyber-400 to-blue-500;
+  }
 
   /* Neon glow text */
   .text-neon-glow {

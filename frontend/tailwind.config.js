@@ -1,6 +1,3 @@
-import forms from '@tailwindcss/forms';
-import typography from '@tailwindcss/typography';
-
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -165,64 +162,5 @@ export default {
       },
     },
   },
-  plugins: [
-    forms({
-      strategy: 'class',
-    }),
-    typography,
-    
-    // Custom plugin for cyber effects
-    function({ addUtilities, addComponents, theme }) {
-      // Utility classes
-      addUtilities({
-        '.text-glow': {
-          textShadow: '0 0 10px currentColor',
-        },
-        '.no-scrollbar': {
-          '-ms-overflow-style': 'none',
-          'scrollbar-width': 'none',
-          '&::-webkit-scrollbar': {
-            display: 'none',
-          },
-        },
-        '.cyber-border': {
-          border: '1px solid',
-          borderImage: 'linear-gradient(45deg, #00d4ff, #0891b2) 1',
-        },
-      });
-      
-      // Component classes
-      addComponents({
-        '.btn-cyber': {
-          '@apply relative px-6 py-2 font-medium text-cyber-400 bg-gray-900 border border-cyber-500 rounded-lg transition-all duration-300 hover:bg-cyber-500 hover:text-gray-900 hover:shadow-neon': {},
-          '&::before': {
-            content: '""',
-            '@apply absolute inset-0 rounded-lg bg-cyber-500 opacity-0 blur-md transition-opacity duration-300': {},
-          },
-          '&:hover::before': {
-            '@apply opacity-30': {},
-          },
-        },
-        '.btn-cyber-primary': {
-          '@apply relative px-6 py-2.5 bg-cyber-600 text-white font-medium rounded-lg overflow-hidden transition-all duration-300 hover:bg-cyber-700 hover:shadow-lg hover:shadow-cyber-500/25 active:scale-95': {},
-          '&::before': {
-            content: '""',
-            '@apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700': {},
-          },
-          '&:hover::before': {
-            '@apply translate-x-full': {},
-          },
-        },
-        '.card-cyber': {
-          '@apply bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-lg p-6 transition-all duration-300 hover:border-cyber-500/50 hover:shadow-lg hover:shadow-cyber-500/10': {},
-        },
-        '.input-cyber': {
-          '@apply bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 transition-all duration-200 focus:border-cyber-500 focus:ring-2 focus:ring-cyber-500/20 focus:bg-gray-900 focus:outline-none': {},
-        },
-        '.text-gradient': {
-          '@apply bg-clip-text text-transparent bg-gradient-to-r from-cyber-400 to-blue-500': {},
-        },
-      });
-    },
-  ],
+  plugins: [],
 }
