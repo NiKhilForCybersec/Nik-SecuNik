@@ -14,15 +14,15 @@ export const useAuthStore = create(
         token,
       }),
       
-      logout: () => {
-        localStorage.removeItem('auth_token');
-        set({
-          user: null,
-          isAuthenticated: false,
-          token: null,
-        });
-        window.location.href = '/login';
-      },
+        logout: () => {
+          localStorage.removeItem('auth_token');
+          set({
+            user: null,
+            isAuthenticated: false,
+            token: null,
+          });
+          window.location.href = '/';
+        },
       
       updateUser: (userData) => set((state) => ({
         user: { ...state.user, ...userData },
