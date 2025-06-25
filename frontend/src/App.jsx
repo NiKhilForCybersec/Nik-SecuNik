@@ -2,22 +2,21 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Layout from '@/components/layout/Layout';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { useThemeStore } from '@/stores/themeStore';
+import { useAuthStore } from '@/stores/authStore';
 
-// Lazy load pages for better performance
-const Upload = lazy(() => import('@/pages/placeholders').then(module => ({ default: module.Upload })));
-const Analysis = lazy(() => import('@/pages/placeholders').then(module => ({ default: module.Analysis })));
-const History = lazy(() => import('@/pages/placeholders').then(module => ({ default: module.History })));
-const Rules = lazy(() => import('@/pages/placeholders').then(module => ({ default: module.Rules })));
-const Settings = lazy(() => import('@/pages/placeholders').then(module => ({ default: module.Settings })));
-const NotFound = lazy(() => import('@/pages/NotFound'));
+// Lazy load pages for code splitting
+const Upload = lazy(() => import('@/pages/Upload'));
+const Analysis = lazy(() => import('@/pages/Analysis'));
+const History = lazy(() => import('@/pages/History'));
+const Rules = lazy(() => import('@/pages/Rules'));
+const Settings = lazy(() => import('@/pages/Settings'));
 
-// Loading component
+// Page loader component
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[400px]">
-    <div className="relative">
-      <div className="w-16 h-16 border-4 border-cyber-500/20 rounded-full"></div>
-      <div className="w-16 h-16 border-4 border-cyber-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
-    </div>
+    <LoadingSpinner size="lg" />
   </div>
 );
 
@@ -27,8 +26,7 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation();
 
   if (!isAuthenticated) {
-    // Redirect to login if we have auth enabled
-    // For now, we'll just render the children since auth isn't implemented
+    // For now, we'll just render the children since auth isn't fully implemented
     return children;
   }
 
@@ -56,15 +54,6 @@ const pageTransition = {
   ease: 'anticipate',
   duration: 0.3,
 };
-
-// Temporary store implementations until real stores are created
-const useAuthStore = () => ({ isAuthenticated: true });
-const useThemeStore = () => ({
-  theme: 'dark',
-  initializeTheme: () => {
-    document.documentElement.classList.add('dark');
-  },
-});
 
 // Main App component
 function App() {
@@ -102,57 +91,33 @@ function App() {
         >
           <Suspense fallback={<PageLoader />}>
             <Routes location={location} key={location.pathname}>
-              {/* Redirect root to upload */}
               <Route path="/" element={<Navigate to="/upload" replace />} />
-              
-              {/* Main routes */}
-              <Route
-                path="/upload"
-                element={
-                  <ProtectedRoute>
-                    <Upload />
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/analysis/:id"
-                element={
-                  <ProtectedRoute>
-                    <Analysis />
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/history"
-                element={
-                  <ProtectedRoute>
-                    <History />
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/rules"
-                element={
-                  <ProtectedRoute>
-                    <Rules />
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
-              />
-              
-              {/* 404 page */}
-              <Route path="*" element={<NotFound />} />
+              <Route path="/upload" element={
+                <ProtectedRoute>
+                  <Upload />
+                </ProtectedRoute>
+              } />
+              <Route path="/analysis/:id?" element={
+                <ProtectedRoute>
+                  <Analysis />
+                </ProtectedRoute>
+              } />
+              <Route path="/history" element={
+                <ProtectedRoute>
+                  <History />
+                </ProtectedRoute>
+              } />
+              <Route path="/rules" element={
+                <ProtectedRoute>
+                  <Rules />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </motion.div>

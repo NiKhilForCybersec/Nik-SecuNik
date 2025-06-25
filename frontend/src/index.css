@@ -1,12 +1,12 @@
+/* Import fonts - must come first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
 /* Import Tailwind CSS */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 
 /* Root variables */
 @layer base {
@@ -16,11 +16,6 @@
     --scrollbar-track: #1f2937;
     --scrollbar-thumb: #374151;
     --scrollbar-thumb-hover: #4b5563;
-  }
-
-  /* Base styles */
-  * {
-    @apply border-border;
   }
 
   html {
@@ -95,174 +90,164 @@
   }
 
   .scrollbar-cyber::-webkit-scrollbar-track {
-    @apply bg-gray-900 border border-gray-800;
+    @apply bg-gray-900;
+    border: 1px solid theme('colors.gray.800');
   }
 
   .scrollbar-cyber::-webkit-scrollbar-thumb {
     @apply bg-gradient-to-b from-cyber-600 to-cyber-700 rounded;
-    box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.3);
+    border: 1px solid theme('colors.cyber.500');
   }
 
   .scrollbar-cyber::-webkit-scrollbar-thumb:hover {
-    @apply from-cyber-500 to-cyber-600;
-    box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.5);
+    @apply bg-gradient-to-b from-cyber-500 to-cyber-600;
   }
 }
 
-/* Loading animations */
+/* Custom component styles */
 @layer components {
-  /* Skeleton loader */
-  .skeleton {
-    @apply bg-gray-800 rounded animate-pulse;
-    background: linear-gradient(
-      90deg,
-      theme('colors.gray.800') 25%,
-      theme('colors.gray.700') 50%,
-      theme('colors.gray.800') 75%
-    );
-    background-size: 200% 100%;
-    animation: loading 1.5s ease-in-out infinite;
+  /* Cyber glow effect */
+  .glow-cyber {
+    @apply relative;
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.3));
   }
 
-  @keyframes loading {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  /* Cyber button styles */
-  .btn-cyber-primary {
-    @apply relative px-6 py-2.5 bg-cyber-600 text-white font-medium rounded-lg overflow-hidden transition-all duration-300 hover:bg-cyber-700 hover:shadow-lg hover:shadow-cyber-500/25 active:scale-95;
-  }
-
-  .btn-cyber-primary::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700;
-  }
-
-  .btn-cyber-primary:hover::before {
-    @apply translate-x-full;
-  }
-
-  /* Cyber input styles */
-  .input-cyber {
-    @apply bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 placeholder-gray-500 transition-all duration-200;
-    @apply focus:border-cyber-500 focus:ring-2 focus:ring-cyber-500/20 focus:bg-gray-900;
-  }
-
-  /* Cyber card styles */
-  .card-cyber {
-    @apply bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-lg p-6 transition-all duration-300;
-    @apply hover:border-cyber-500/50 hover:shadow-lg hover:shadow-cyber-500/10;
+  /* Neon text effect */
+  .text-neon {
+    text-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 40px currentColor;
   }
 
   /* Glitch effect */
   .glitch {
-    position: relative;
-    color: theme('colors.cyber.400');
-    font-weight: bold;
+    @apply relative;
   }
 
   .glitch::before,
   .glitch::after {
     content: attr(data-text);
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+    @apply absolute top-0 left-0 w-full h-full;
   }
 
   .glitch::before {
-    animation: glitch-1 0.3s infinite;
-    color: theme('colors.neon.pink');
+    animation: glitch-1 0.5s infinite;
+    @apply text-cyber-400;
     z-index: -1;
   }
 
   .glitch::after {
-    animation: glitch-2 0.3s infinite;
-    color: theme('colors.neon.blue');
+    animation: glitch-2 0.5s infinite;
+    @apply text-pink-500;
     z-index: -2;
   }
 
+  /* Shadow effects */
+  .shadow-neon {
+    box-shadow: 
+      0 0 5px theme('colors.cyber.500'),
+      0 0 10px theme('colors.cyber.500'),
+      0 0 20px theme('colors.cyber.500');
+  }
+
+  .shadow-neon-lg {
+    box-shadow: 
+      0 0 10px theme('colors.cyber.500'),
+      0 0 20px theme('colors.cyber.500'),
+      0 0 40px theme('colors.cyber.500'),
+      0 0 80px theme('colors.cyber.500');
+  }
+}
+
+/* Animations */
+@layer utilities {
   @keyframes glitch-1 {
     0%, 100% {
-      clip-path: inset(0 0 0 0);
       transform: translate(0);
     }
     20% {
-      clip-path: inset(20% 0 60% 0);
       transform: translate(-2px, 2px);
     }
     40% {
-      clip-path: inset(50% 0 20% 0);
-      transform: translate(2px, -2px);
+      transform: translate(-2px, -2px);
     }
     60% {
-      clip-path: inset(80% 0 10% 0);
-      transform: translate(-2px, 0);
+      transform: translate(2px, 2px);
     }
     80% {
-      clip-path: inset(10% 0 80% 0);
-      transform: translate(2px, 1px);
+      transform: translate(2px, -2px);
     }
   }
 
   @keyframes glitch-2 {
     0%, 100% {
-      clip-path: inset(0 0 0 0);
       transform: translate(0);
     }
     20% {
-      clip-path: inset(70% 0 20% 0);
-      transform: translate(2px, -1px);
+      transform: translate(2px, -2px);
     }
     40% {
-      clip-path: inset(20% 0 70% 0);
-      transform: translate(-2px, 2px);
+      transform: translate(2px, 2px);
     }
     60% {
-      clip-path: inset(40% 0 40% 0);
-      transform: translate(1px, -2px);
+      transform: translate(-2px, -2px);
     }
     80% {
-      clip-path: inset(10% 0 60% 0);
-      transform: translate(-2px, 1px);
+      transform: translate(-2px, 2px);
     }
   }
 
-  /* Matrix rain effect background */
-  .matrix-bg {
-    position: relative;
-    overflow: hidden;
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
-  .matrix-bg::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 212, 255, 0.03) 2px,
-        rgba(0, 212, 255, 0.03) 4px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 212, 255, 0.03) 2px,
-        rgba(0, 212, 255, 0.03) 4px
-      );
-    pointer-events: none;
+  @keyframes slideIn {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+}
+
+/* Loading spinner styles */
+@layer components {
+  .spinner {
+    @apply inline-block w-8 h-8 border-4 border-gray-700 border-t-cyber-500 rounded-full;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 }
 
@@ -277,26 +262,12 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
 
-  /* Text gradient */
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-cyber-400 to-blue-500;
-  }
-
-  /* Neon glow text */
-  .text-neon-glow {
-    text-shadow: 
-      0 0 10px theme('colors.cyber.400'),
-      0 0 20px theme('colors.cyber.400'),
-      0 0 30px theme('colors.cyber.400');
-  }
-
-  /* Cyber grid background */
-  .bg-cyber-grid {
-    background-image: 
-      linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px);
-    background-size: 50px 50px;
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
   }
 }
 

@@ -2,11 +2,11 @@ import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CloudUploadIcon,
-  DocumentTextIcon,
-  ExclamationCircleIcon,
-  FolderOpenIcon
-} from '@heroicons/react/24/outline';
+  CloudUpload,
+  FileText,
+  AlertCircle,
+  FolderOpen
+} from 'lucide-react';
 import { formatBytes } from '@/utils/formatters';
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
@@ -72,7 +72,7 @@ export default function FileDropzone({
   const getBorderColor = () => {
     if (isDragReject) return 'border-red-500';
     if (isDragAccept) return 'border-green-500';
-    if (isDragActive) return 'border-cyber-blue';
+    if (isDragActive) return 'border-cyber-500';
     return 'border-gray-700';
   };
 
@@ -80,7 +80,7 @@ export default function FileDropzone({
   const getBackgroundColor = () => {
     if (isDragReject) return 'bg-red-500/10';
     if (isDragAccept) return 'bg-green-500/10';
-    if (isDragActive) return 'bg-cyber-blue/10';
+    if (isDragActive) return 'bg-cyber-500/10';
     return 'bg-gray-900/50';
   };
 
@@ -92,7 +92,7 @@ export default function FileDropzone({
           relative overflow-hidden rounded-lg border-2 border-dashed p-12 text-center 
           transition-all duration-200 cursor-pointer
           ${getBorderColor()} ${getBackgroundColor()}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-cyber-blue/50'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-cyber-500/50'}
         `}
       >
         <input {...getInputProps()} />
@@ -123,7 +123,7 @@ export default function FileDropzone({
                 exit={{ opacity: 0, scale: 0.8 }}
                 className="flex flex-col items-center"
               >
-                <ExclamationCircleIcon className="h-16 w-16 text-red-500 mb-4" />
+                <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
                 <p className="text-lg font-medium text-red-500">Invalid file type or size</p>
                 <p className="text-sm text-gray-400 mt-2">
                   Please check file requirements
@@ -137,8 +137,8 @@ export default function FileDropzone({
                 exit={{ opacity: 0, scale: 0.8 }}
                 className="flex flex-col items-center"
               >
-                <FolderOpenIcon className="h-16 w-16 text-cyber-blue mb-4 animate-pulse" />
-                <p className="text-lg font-medium text-cyber-blue">Drop files here</p>
+                <FolderOpen className="h-16 w-16 text-cyber-500 mb-4 animate-pulse" />
+                <p className="text-lg font-medium text-cyber-500">Drop files here</p>
                 <p className="text-sm text-gray-400 mt-2">
                   Release to upload
                 </p>
@@ -151,7 +151,7 @@ export default function FileDropzone({
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center"
               >
-                <CloudUploadIcon className="h-16 w-16 text-gray-500 mb-4" />
+                <CloudUpload className="h-16 w-16 text-gray-500 mb-4" />
                 <p className="text-lg font-medium text-gray-300">
                   Drag & drop files here
                 </p>
@@ -177,14 +177,14 @@ export default function FileDropzone({
         {isDragActive && (
           <>
             {/* Corner Brackets */}
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyber-blue" />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-cyber-blue" />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyber-blue" />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyber-blue" />
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyber-500" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-cyber-500" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyber-500" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyber-500" />
             
             {/* Scanning Line */}
             <motion.div
-              className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyber-blue to-transparent"
+              className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyber-500 to-transparent"
               initial={{ top: 0 }}
               animate={{ top: '100%' }}
               transition={{ duration: 1.5, repeat: Infinity }}
@@ -207,7 +207,7 @@ export default function FileDropzone({
                 key={index}
                 className="flex items-center space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg"
               >
-                <ExclamationCircleIcon className="h-5 w-5 text-red-500 flex-shrink-0" />
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
                 <p className="text-sm text-red-400">{error}</p>
               </div>
             ))}
@@ -222,7 +222,7 @@ export default function FileDropzone({
             onClick={() => document.querySelector('input[type="file"]')?.click()}
             className="flex items-center justify-center space-x-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-lg transition-colors"
           >
-            <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+            <FileText className="h-5 w-5 text-gray-400" />
             <span className="text-sm text-gray-300">Browse Files</span>
           </button>
           
@@ -233,7 +233,7 @@ export default function FileDropzone({
             }}
             className="flex items-center justify-center space-x-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-lg transition-colors"
           >
-            <FolderOpenIcon className="h-5 w-5 text-gray-400" />
+            <FolderOpen className="h-5 w-5 text-gray-400" />
             <span className="text-sm text-gray-300">Select Folder</span>
           </button>
         </div>

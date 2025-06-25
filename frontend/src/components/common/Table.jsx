@@ -1,33 +1,51 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import Button from './Button';
-import LoadingSpinner, { SkeletonLoader } from './LoadingSpinner';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ChevronUpIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MagnifyingGlassIcon,
+} from '@heroicons/react/24/outline';
+import clsx from 'clsx';
+import LoadingSpinner from './LoadingSpinner';
 
 const Table = ({
   data = [],
   columns = [],
   loading = false,
-  sortable = true,
-  selectable = false,
-  pagination = true,
-  pageSize = 20,
+  error = null,
   onRowClick,
+  selectedRows = [],
   onSelectionChange,
-  emptyMessage = 'No data available',
-  className = '',
+  pagination,
+  onPageChange,
+  searchable = false,
+  sortable = true,
   striped = true,
-  hoverable = true,
-  compact = false
+  compact = false,
+  className,
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
-  const [selectedRows, setSelectedRows] = useState(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
 
-  // Sorting logic
+  // Filter data based on search
+  const filteredData = useMemo(() => {
+    if (!searchable || !searchTerm) return data;
+
+    return data.filter(row => {
+      return columns.some(column => {
+        const value = column.accessor ? row[column.accessor] : '';
+        return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+      });
+    });
+  }, [data, searchTerm, columns, searchable]);
+
+  // Sort data
   const sortedData = useMemo(() => {
-    if (!sortable || !sortConfig.key) return data;
+    if (!sortable || !sortConfig.key) return filteredData;
 
-    return [...data].sort((a, b) => {
+    const sorted = [...filteredData].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
 
@@ -42,280 +60,213 @@ const Table = ({
       }
       return 0;
     });
-  }, [data, sortConfig, sortable]);
 
-  // Pagination logic
-  const paginatedData = useMemo(() => {
-    if (!pagination) return sortedData;
+    return sorted;
+  }, [filteredData, sortConfig, sortable]);
 
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return sortedData.slice(startIndex, endIndex);
-  }, [sortedData, currentPage, pageSize, pagination]);
-
-  const totalPages = Math.ceil(data.length / pageSize);
-
-  // Handle sorting
+  // Handle sort
   const handleSort = (key) => {
     if (!sortable) return;
 
     let direction = 'asc';
-    if (sortConfig.key === key) {
-      if (sortConfig.direction === 'asc') {
-        direction = 'desc';
-      } else if (sortConfig.direction === 'desc') {
-        direction = null;
-      }
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
     }
-
     setSortConfig({ key, direction });
   };
 
   // Handle row selection
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      const allIds = paginatedData.map((_, index) => index);
-      setSelectedRows(new Set(allIds));
-      onSelectionChange?.(allIds);
+  const handleRowSelection = (row) => {
+    if (!onSelectionChange) return;
+
+    const isSelected = selectedRows.some(r => r.id === row.id);
+    if (isSelected) {
+      onSelectionChange(selectedRows.filter(r => r.id !== row.id));
     } else {
-      setSelectedRows(new Set());
-      onSelectionChange?.([]);
+      onSelectionChange([...selectedRows, row]);
     }
   };
 
-  const handleSelectRow = (index) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
+  // Select all rows
+  const handleSelectAll = () => {
+    if (!onSelectionChange) return;
+
+    if (selectedRows.length === sortedData.length) {
+      onSelectionChange([]);
     } else {
-      newSelected.add(index);
+      onSelectionChange(sortedData);
     }
-    setSelectedRows(newSelected);
-    onSelectionChange?.(Array.from(newSelected));
   };
 
-  // Sort icon component
-  const SortIcon = ({ columnKey }) => {
-    if (!sortable) return null;
-
-    if (sortConfig.key === columnKey) {
-      if (sortConfig.direction === 'asc') {
-        return <ChevronUp className="w-4 h-4 text-cyan-400" />;
-      }
-      if (sortConfig.direction === 'desc') {
-        return <ChevronDown className="w-4 h-4 text-cyan-400" />;
-      }
-    }
-    return <ChevronsUpDown className="w-4 h-4 text-gray-600" />;
-  };
-
-  // Loading state
   if (loading) {
     return (
-      <div className={`w-full ${className}`}>
-        <div className="bg-gray-800 rounded-lg p-8">
-          <SkeletonLoader lines={10} />
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <LoadingSpinner size="lg" text="Loading data..." />
       </div>
     );
   }
 
-  // Empty state
-  if (data.length === 0) {
+  if (error) {
     return (
-      <div className={`w-full ${className}`}>
-        <div className="bg-gray-800 rounded-lg p-12 text-center">
-          <p className="text-gray-400">{emptyMessage}</p>
-        </div>
+      <div className="text-center p-8">
+        <p className="text-red-400">{error}</p>
       </div>
     );
   }
-
-  const cellPadding = compact ? 'px-4 py-2' : 'px-6 py-4';
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={clsx('space-y-4', className)}>
+      {/* Search */}
+      {searchable && (
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-cyber-500 focus:ring-1 focus:ring-cyber-500 focus:outline-none"
+          />
+        </div>
+      )}
+
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">
-              {selectable && (
-                <th className={`${cellPadding} text-left`}>
+              {onSelectionChange && (
+                <th className="px-4 py-3 text-left">
                   <input
                     type="checkbox"
-                    checked={selectedRows.size === paginatedData.length && paginatedData.length > 0}
+                    checked={selectedRows.length === sortedData.length && sortedData.length > 0}
+                    indeterminate={selectedRows.length > 0 && selectedRows.length < sortedData.length}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-cyan-500"
+                    className="rounded border-gray-600 text-cyber-500 focus:ring-cyber-500"
                   />
                 </th>
               )}
               {columns.map((column) => (
                 <th
-                  key={column.key}
-                  className={`
-                    ${cellPadding} text-left text-sm font-medium text-gray-300
-                    ${sortable && column.sortable !== false ? 'cursor-pointer hover:text-white' : ''}
-                  `}
-                  onClick={() => column.sortable !== false && handleSort(column.key)}
+                  key={column.accessor}
+                  className={clsx(
+                    'px-4 text-left text-sm font-medium text-gray-400',
+                    compact ? 'py-2' : 'py-3',
+                    sortable && column.sortable !== false && 'cursor-pointer hover:text-white'
+                  )}
+                  onClick={() => column.sortable !== false && handleSort(column.accessor)}
                 >
                   <div className="flex items-center space-x-2">
-                    <span>{column.label}</span>
-                    {column.sortable !== false && <SortIcon columnKey={column.key} />}
+                    <span>{column.header}</span>
+                    {sortable && column.sortable !== false && (
+                      <div className="flex flex-col">
+                        <ChevronUpIcon
+                          className={clsx(
+                            'w-3 h-3',
+                            sortConfig.key === column.accessor && sortConfig.direction === 'asc'
+                              ? 'text-cyber-500'
+                              : 'text-gray-600'
+                          )}
+                        />
+                        <ChevronDownIcon
+                          className={clsx(
+                            'w-3 h-3 -mt-1',
+                            sortConfig.key === column.accessor && sortConfig.direction === 'desc'
+                              ? 'text-cyber-500'
+                              : 'text-gray-600'
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {paginatedData.map((row, rowIndex) => {
-              const actualIndex = (currentPage - 1) * pageSize + rowIndex;
-              const isSelected = selectedRows.has(rowIndex);
-
-              return (
-                <tr
-                  key={actualIndex}
-                  onClick={() => onRowClick?.(row, actualIndex)}
-                  className={`
-                    border-b border-gray-800
-                    ${striped && rowIndex % 2 === 0 ? 'bg-gray-900/50' : ''}
-                    ${hoverable ? 'hover:bg-gray-800/50' : ''}
-                    ${onRowClick ? 'cursor-pointer' : ''}
-                    ${isSelected ? 'bg-cyan-500/10' : ''}
-                    transition-colors
-                  `}
+            <AnimatePresence>
+              {sortedData.map((row, index) => (
+                <motion.tr
+                  key={row.id || index}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className={clsx(
+                    'border-b border-gray-800 transition-colors',
+                    onRowClick && 'cursor-pointer hover:bg-gray-800/50',
+                    striped && index % 2 === 0 && 'bg-gray-900/30',
+                    selectedRows.some(r => r.id === row.id) && 'bg-cyber-900/20'
+                  )}
+                  onClick={() => onRowClick && onRowClick(row)}
                 >
-                  {selectable && (
-                    <td className={cellPadding}>
+                  {onSelectionChange && (
+                    <td className={clsx('px-4', compact ? 'py-2' : 'py-3')}>
                       <input
                         type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleSelectRow(rowIndex)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-cyan-500"
+                        checked={selectedRows.some(r => r.id === row.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleRowSelection(row);
+                        }}
+                        className="rounded border-gray-600 text-cyber-500 focus:ring-cyber-500"
                       />
                     </td>
                   )}
                   {columns.map((column) => (
                     <td
-                      key={column.key}
-                      className={`${cellPadding} text-sm text-gray-300`}
+                      key={column.accessor}
+                      className={clsx(
+                        'px-4 text-sm text-gray-300',
+                        compact ? 'py-2' : 'py-3'
+                      )}
                     >
-                      {column.render
-                        ? column.render(row[column.key], row, actualIndex)
-                        : row[column.key]}
+                      {column.cell
+                        ? column.cell(row[column.accessor], row)
+                        : row[column.accessor]}
                     </td>
                   ))}
-                </tr>
-              );
-            })}
+                </motion.tr>
+              ))}
+            </AnimatePresence>
           </tbody>
         </table>
+
+        {sortedData.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No data available
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
-      {pagination && totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
+      {pagination && (
+        <div className="flex items-center justify-between">
           <div className="text-sm text-gray-400">
-            Showing {((currentPage - 1) * pageSize) + 1} to{' '}
-            {Math.min(currentPage * pageSize, data.length)} of {data.length} entries
+            Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+            {pagination.total} results
           </div>
-          
           <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              leftIcon={<ChevronLeft className="w-4 h-4" />}
+            <button
+              onClick={() => onPageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+              className="p-2 hover:bg-gray-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Previous
-            </Button>
-
-            <div className="flex items-center space-x-1">
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-                
-                // Show first, last, and pages around current
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <Button
-                      key={page}
-                      size="sm"
-                      variant={page === currentPage ? 'primary' : 'ghost'}
-                      onClick={() => setCurrentPage(page)}
-                      className="min-w-[40px]"
-                    >
-                      {page}
-                    </Button>
-                  );
-                }
-                
-                // Show ellipsis
-                if (page === currentPage - 2 || page === currentPage + 2) {
-                  return <span key={page} className="text-gray-500 px-2">...</span>;
-                }
-                
-                return null;
-              })}
-            </div>
-
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              rightIcon={<ChevronRight className="w-4 h-4" />}
+              <ChevronLeftIcon className="w-5 h-5" />
+            </button>
+            <span className="px-3 py-1 text-sm">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => onPageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.totalPages}
+              className="p-2 hover:bg-gray-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Next
-            </Button>
+              <ChevronRightIcon className="w-5 h-5" />
+            </button>
           </div>
         </div>
       )}
     </div>
   );
 };
-
-// Simple table without features
-export const SimpleTable = ({ headers = [], rows = [], className = '' }) => {
-  return (
-    <div className={`overflow-x-auto ${className}`}>
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-gray-700">
-            {headers.map((header, index) => (
-              <th
-                key={index}
-                className="px-4 py-2 text-left text-sm font-medium text-gray-300"
-              >
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className="border-b border-gray-800 hover:bg-gray-800/50"
-            >
-              {row.map((cell, cellIndex) => (
-                <td
-                  key={cellIndex}
-                  className="px-4 py-2 text-sm text-gray-300"
-                >
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-export default Table;

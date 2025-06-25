@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { NavLink, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload,
   Activity,
@@ -15,11 +15,20 @@ import {
   Code,
   HelpCircle,
   LogOut,
+  ChevronRight,
+  ChevronDown,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useThemeStore } from '@/stores/themeStore';
+import { useAuthStore } from '@/stores/authStore';
 
 const Sidebar = () => {
-  const [expandedSection, setExpandedSection] = useState(null);
+  const location = useLocation();
+  const [expandedSection, setExpandedSection] = useState('Main');
+  const { theme, toggleTheme } = useThemeStore();
+  const { logout } = useAuthStore();
 
   // Navigation items
   const navigationItems = [
@@ -117,145 +126,133 @@ const Sidebar = () => {
     },
   ];
 
-  // Logo and brand
-  const Logo = () => (
-    <div className="flex items-center gap-3 mb-8">
-      <div className="relative w-10 h-10 bg-gradient-to-br from-cyber-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyber-500/30">
-        <Shield className="w-6 h-6 text-white" />
-        <div className="absolute inset-0 bg-cyber-400 rounded-lg animate-ping opacity-20"></div>
-      </div>
-      <div>
-        <h1 className="text-xl font-bold text-gray-100 font-cyber">SecuNik</h1>
-        <p className="text-xs text-gray-500">LogX Platform</p>
-      </div>
-    </div>
-  );
-
-  // Navigation link component
-  const NavItem = ({ item, isActive }) => (
-    <motion.div
-      whileHover={{ x: 4 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <NavLink
-        to={item.path}
-        className={({ isActive }) =>
-          clsx(
-            'group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
-            isActive
-              ? 'bg-cyber-600/20 text-cyber-400 border border-cyber-600/30'
-              : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
-          )
-        }
-      >
-        <item.icon size={20} className="flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{item.name}</p>
-          {isActive && (
-            <p className="text-xs text-gray-500 truncate">{item.description}</p>
-          )}
-        </div>
-        {item.badge && (
-          <span className={clsx(
-            'px-2 py-0.5 text-xs font-medium rounded-full',
-            item.badge.color,
-            'text-white'
-          )}>
-            {item.badge.text}
-          </span>
-        )}
-      </NavLink>
-    </motion.div>
-  );
+  const toggleSection = (section) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
 
   return (
     <aside className="w-64 h-full bg-gray-800 border-r border-gray-700 flex flex-col">
-      {/* Header */}
-      <div className="p-6 pb-0">
-        <Logo />
+      {/* Logo */}
+      <div className="h-16 flex items-center justify-center border-b border-gray-700">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          className="flex items-center space-x-2"
+        >
+          <Shield className="w-8 h-8 text-cyber-500" />
+          <span className="text-xl font-bold text-gradient">
+            SecuNik LogX
+          </span>
+        </motion.div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 pb-4 overflow-y-auto scrollbar-thin">
-        {navigationItems.map((section, index) => (
-          <div key={section.section} className={clsx(index > 0 && 'mt-6')}>
+      <nav className="flex-1 overflow-y-auto py-4 scrollbar-thin">
+        {navigationItems.map((group) => (
+          <div key={group.section} className="mb-4">
             <button
-              onClick={() => setExpandedSection(
-                expandedSection === section.section ? null : section.section
+              onClick={() => toggleSection(group.section)}
+              className="w-full px-4 py-2 flex items-center justify-between text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            >
+              <span>{group.section}</span>
+              {expandedSection === group.section ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
               )}
-              className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
-            >
-              <span>{section.section}</span>
-              <motion.span
-                animate={{ rotate: expandedSection === section.section ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown size={14} />
-              </motion.span>
             </button>
-            
-            <motion.div
-              initial={false}
-              animate={{
-                height: expandedSection === section.section || expandedSection === null ? 'auto' : 0,
-                opacity: expandedSection === section.section || expandedSection === null ? 1 : 0,
-              }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-2 space-y-1">
-                {section.items.map(item => (
-                  <NavItem key={item.path} item={item} />
-                ))}
-              </div>
-            </motion.div>
+
+            <AnimatePresence>
+              {expandedSection === group.section && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    const isImplemented = ['/upload', '/analysis', '/history', '/rules', '/settings'].includes(item.path);
+
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={isImplemented ? item.path : '#'}
+                        className={clsx(
+                          'flex items-center space-x-3 px-4 py-2.5 mx-2 rounded-lg transition-all duration-200',
+                          isActive
+                            ? 'bg-cyber-500/20 text-cyber-400 border-l-4 border-cyber-500'
+                            : isImplemented
+                            ? 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                            : 'text-gray-600 cursor-not-allowed'
+                        )}
+                        onClick={(e) => {
+                          if (!isImplemented) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <Icon className="w-5 h-5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          {!isImplemented && (
+                            <span className="text-xs text-gray-600 block">Coming soon</span>
+                          )}
+                        </div>
+                        {item.badge && isImplemented && (
+                          <span
+                            className={clsx(
+                              'px-2 py-0.5 text-xs font-medium rounded-full',
+                              item.badge.color,
+                              'text-white'
+                            )}
+                          >
+                            {item.badge.text}
+                          </span>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-700">
-        {/* User info */}
-        <div className="flex items-center gap-3 p-3 bg-gray-900 rounded-lg mb-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-cyber-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-            A
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-100 truncate">Admin User</p>
-            <p className="text-xs text-gray-500">admin@secunik.com</p>
-          </div>
-        </div>
+      {/* Bottom actions */}
+      <div className="p-4 border-t border-gray-700 space-y-2">
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+        >
+          {theme === 'dark' ? (
+            <Moon className="w-5 h-5" />
+          ) : (
+            <Sun className="w-5 h-5" />
+          )}
+          <span className="text-sm">Toggle Theme</span>
+        </button>
 
-        {/* Actions */}
-        <div className="flex gap-2">
-          <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-lg transition-colors">
-            <HelpCircle size={16} />
-            <span>Help</span>
-          </button>
-          <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-lg transition-colors">
-            <LogOut size={16} />
-            <span>Logout</span>
-          </button>
-        </div>
+        <button
+          onClick={() => window.open('https://docs.secunik.com', '_blank')}
+          className="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+        >
+          <HelpCircle className="w-5 h-5" />
+          <span className="text-sm">Help & Docs</span>
+        </button>
+
+        <button
+          onClick={logout}
+          className="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="text-sm">Logout</span>
+        </button>
       </div>
     </aside>
   );
 };
-
-// ChevronDown icon component
-const ChevronDown = ({ size }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="6 9 12 15 18 9"></polyline>
-  </svg>
-);
 
 export default Sidebar;

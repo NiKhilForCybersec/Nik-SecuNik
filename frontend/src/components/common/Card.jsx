@@ -1,58 +1,49 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import clsx from 'clsx';
 
-const VARIANTS = {
-  default: {
-    container: 'bg-gray-800/50 border-gray-700',
-    header: 'border-gray-700',
-    content: ''
-  },
-  cyber: {
-    container: 'bg-gray-900/50 border-cyber-blue/30 shadow-cyber',
-    header: 'border-cyber-blue/30',
-    content: 'cyber-grid'
-  },
-  danger: {
-    container: 'bg-red-900/10 border-red-500/30',
-    header: 'border-red-500/30',
-    content: ''
-  },
-  success: {
-    container: 'bg-green-900/10 border-green-500/30',
-    header: 'border-green-500/30',
-    content: ''
-  },
-  warning: {
-    container: 'bg-yellow-900/10 border-yellow-500/30',
-    header: 'border-yellow-500/30',
-    content: ''
-  }
-};
-
-export default function Card({
+const Card = ({
   children,
   title,
   subtitle,
   actions,
   variant = 'default',
-  collapsible = false,
-  defaultExpanded = true,
+  padding = true,
   loading = false,
   error = null,
-  className = '',
-  headerClassName = '',
-  contentClassName = '',
-  noPadding = false,
+  collapsible = false,
+  defaultExpanded = true,
+  className,
   ...props
-}) {
+}) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const variantStyles = VARIANTS[variant] || VARIANTS.default;
 
-  // Loading skeleton
+  const variantStyles = {
+    default: {
+      container: 'bg-gray-800/50 border-gray-700',
+      header: 'border-gray-700',
+    },
+    primary: {
+      container: 'bg-cyber-900/20 border-cyber-600',
+      header: 'border-cyber-600',
+    },
+    danger: {
+      container: 'bg-red-900/20 border-red-600',
+      header: 'border-red-600',
+    },
+    success: {
+      container: 'bg-green-900/20 border-green-600',
+      header: 'border-green-600',
+    },
+  };
+
+  const styles = variantStyles[variant] || variantStyles.default;
+
+  // Loading state
   if (loading) {
     return (
-      <div className={`rounded-lg border backdrop-blur ${variantStyles.container} ${className}`} {...props}>
+      <div className={clsx('rounded-lg border backdrop-blur', styles.container, className)} {...props}>
         <div className="p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-700 rounded w-1/4 mb-4"></div>
@@ -70,7 +61,7 @@ export default function Card({
   // Error state
   if (error) {
     return (
-      <div className={`rounded-lg border backdrop-blur bg-red-900/10 border-red-500/30 ${className}`} {...props}>
+      <div className={clsx('rounded-lg border backdrop-blur bg-red-900/10 border-red-500/30', className)} {...props}>
         <div className="p-6">
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0">
@@ -94,82 +85,49 @@ export default function Card({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-lg border backdrop-blur transition-all duration-200 ${variantStyles.container} ${className}`}
+      className={clsx('rounded-lg border backdrop-blur transition-all duration-200', styles.container, className)}
       {...props}
     >
-      {/* Cyber variant background effect */}
-      {variant === 'cyber' && (
-        <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0" 
-                 style={{
-                   backgroundImage: `
-                     repeating-linear-gradient(
-                       0deg,
-                       transparent,
-                       transparent 2px,
-                       rgba(0, 255, 255, 0.1) 2px,
-                       rgba(0, 255, 255, 0.1) 4px
-                     ),
-                     repeating-linear-gradient(
-                       90deg,
-                       transparent,
-                       transparent 2px,
-                       rgba(0, 255, 255, 0.1) 2px,
-                       rgba(0, 255, 255, 0.1) 4px
-                     )
-                   `
-                 }}
-            />
-          </div>
-          
-          {/* Animated corner brackets */}
-          <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-cyber-blue animate-pulse" />
-          <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-cyber-blue animate-pulse" />
-          <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-cyber-blue animate-pulse" />
-          <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-cyber-blue animate-pulse" />
-        </div>
+      {/* Cyber effect corners */}
+      {variant === 'primary' && (
+        <>
+          <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyber-500 rounded-tl-lg" />
+          <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-cyber-500 rounded-tr-lg" />
+          <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-cyber-500 rounded-bl-lg" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-cyber-500 rounded-br-lg" />
+        </>
       )}
 
       {/* Header */}
       {hasHeader && (
-        <div className={`
-          ${noPadding ? 'px-6 py-4' : 'p-4'}
-          ${(title || subtitle || actions) ? `border-b ${variantStyles.header}` : ''}
-          ${headerClassName}
-        `}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              {title && (
-                <h3 className="text-lg font-medium text-white">
-                  {title}
-                </h3>
-              )}
-              {subtitle && (
-                <p className="text-sm text-gray-400 mt-1">
-                  {subtitle}
-                </p>
-              )}
-            </div>
+        <div
+          className={clsx(
+            'flex items-center justify-between border-b',
+            padding ? 'p-4' : 'px-4 py-3',
+            styles.header,
+            collapsible && 'cursor-pointer select-none'
+          )}
+          onClick={collapsible ? () => setIsExpanded(!isExpanded) : undefined}
+        >
+          <div className="flex-1">
+            {title && (
+              <h3 className="text-lg font-semibold text-gray-100">{title}</h3>
+            )}
+            {subtitle && (
+              <p className="text-sm text-gray-400 mt-1">{subtitle}</p>
+            )}
+          </div>
 
-            <div className="flex items-center space-x-3 ml-4">
-              {actions}
-              
-              {collapsible && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-gray-400 hover:text-white transition-colors p-1"
-                  aria-label={isExpanded ? 'Collapse' : 'Expand'}
-                >
-                  <motion.div
-                    animate={{ rotate: isExpanded ? 0 : 180 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <ChevronUpIcon className="h-5 w-5" />
-                  </motion.div>
-                </button>
-              )}
-            </div>
+          <div className="flex items-center space-x-3">
+            {actions}
+            {collapsible && (
+              <motion.div
+                animate={{ rotate: isExpanded ? 0 : -180 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+              </motion.div>
+            )}
           </div>
         </div>
       )}
@@ -178,53 +136,20 @@ export default function Card({
       <AnimatePresence initial={false}>
         {(!collapsible || isExpanded) && (
           <motion.div
-            initial={collapsible ? { height: 0, opacity: 0 } : {}}
+            initial={collapsible ? { height: 0, opacity: 0 } : false}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            exit={collapsible ? { height: 0, opacity: 0 } : false}
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className={`
-              ${noPadding ? '' : 'p-6'}
-              ${variantStyles.content}
-              ${contentClassName}
-              relative
-            `}>
+            <div className={padding ? 'p-4' : ''}>
               {children}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Bottom glow effect for certain variants */}
-      {(variant === 'cyber' || variant === 'danger' || variant === 'success') && (
-        <div className={`
-          absolute bottom-0 left-0 right-0 h-px
-          ${variant === 'cyber' ? 'bg-gradient-to-r from-transparent via-cyber-blue to-transparent' :
-            variant === 'danger' ? 'bg-gradient-to-r from-transparent via-red-500 to-transparent' :
-            'bg-gradient-to-r from-transparent via-green-500 to-transparent'}
-          opacity-50
-        `} />
-      )}
     </motion.div>
   );
-}
+};
 
-// Compound components for better composition
-export const CardHeader = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-b border-gray-700 ${className}`}>
-    {children}
-  </div>
-);
-
-export const CardContent = ({ children, className = '' }) => (
-  <div className={`p-6 ${className}`}>
-    {children}
-  </div>
-);
-
-export const CardFooter = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-t border-gray-700 ${className}`}>
-    {children}
-  </div>
-);
+export default Card;

@@ -1,92 +1,88 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import clsx from 'clsx';
 
 const Tabs = ({
   tabs = [],
-  activeTab: controlledActiveTab,
+  defaultTab,
   onChange,
   variant = 'default',
   size = 'md',
   fullWidth = false,
-  className = ''
+  className,
 }) => {
-  const [internalActiveTab, setInternalActiveTab] = useState(0);
-  const [indicatorStyle, setIndicatorStyle] = useState({});
-  const tabRefs = useRef([]);
+  const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
 
-  // Use controlled or internal state
-  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
-  const setActiveTab = controlledActiveTab !== undefined ? onChange : setInternalActiveTab;
-
-  // Update indicator position
-  useEffect(() => {
-    const activeTabElement = tabRefs.current[activeTab];
-    if (activeTabElement) {
-      setIndicatorStyle({
-        left: activeTabElement.offsetLeft,
-        width: activeTabElement.offsetWidth
-      });
-    }
-  }, [activeTab, tabs]);
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    onChange?.(tabId);
+  };
 
   const variants = {
     default: {
       container: 'border-b border-gray-700',
       tab: 'text-gray-400 hover:text-white',
-      activeTab: 'text-cyan-400',
-      indicator: 'bg-cyan-500'
+      activeTab: 'text-cyber-400',
+      indicator: 'bg-cyber-500',
     },
     pills: {
       container: 'bg-gray-800 p-1 rounded-lg',
-      tab: 'text-gray-400 hover:text-white hover:bg-gray-700 rounded-md',
+      tab: 'text-gray-400 hover:text-white rounded-md',
       activeTab: 'text-white bg-gray-700',
-      indicator: 'hidden'
+      indicator: null,
     },
-    underline: {
-      container: '',
-      tab: 'text-gray-400 hover:text-white border-b-2 border-transparent',
-      activeTab: 'text-cyan-400 border-cyan-400',
-      indicator: 'hidden'
-    }
+    cyber: {
+      container: 'border-b-2 border-gray-800',
+      tab: 'text-gray-500 hover:text-gray-300',
+      activeTab: 'text-cyber-400',
+      indicator: 'bg-gradient-to-r from-cyber-400 to-cyber-600',
+    },
   };
 
   const sizes = {
     sm: 'text-sm px-3 py-1.5',
     md: 'text-base px-4 py-2',
-    lg: 'text-lg px-6 py-3'
+    lg: 'text-lg px-6 py-3',
   };
 
-  const currentVariant = variants[variant] || variants.default;
+  const activeTabData = tabs.find(tab => tab.id === activeTab);
+  const variantStyles = variants[variant];
 
   return (
     <div className={className}>
-      <div className={`relative ${currentVariant.container}`}>
-        <div className={`flex ${fullWidth ? 'w-full' : ''}`}>
-          {tabs.map((tab, index) => {
-            const isActive = activeTab === index;
-            const isDisabled = tab.disabled;
+      {/* Tab Headers */}
+      <div className={clsx(variantStyles.container, 'relative')}>
+        <div className={clsx(
+          'flex',
+          fullWidth ? 'w-full' : 'inline-flex',
+          variant === 'pills' && 'space-x-1'
+        )}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
 
             return (
               <button
-                key={index}
-                ref={el => tabRefs.current[index] = el}
-                onClick={() => !isDisabled && setActiveTab(index)}
-                disabled={isDisabled}
-                className={`
-                  ${sizes[size]}
-                  ${fullWidth ? 'flex-1' : ''}
-                  ${isActive ? currentVariant.activeTab : currentVariant.tab}
-                  ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
-                  font-medium transition-all duration-200
-                  flex items-center justify-center space-x-2
-                `}
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                disabled={tab.disabled}
+                className={clsx(
+                  'relative flex items-center space-x-2 font-medium transition-all duration-200',
+                  sizes[size],
+                  fullWidth && 'flex-1',
+                  isActive ? variantStyles.activeTab : variantStyles.tab,
+                  tab.disabled && 'opacity-50 cursor-not-allowed'
+                )}
               >
-                {tab.icon && <span>{tab.icon}</span>}
+                {Icon && <Icon className={clsx(
+                  size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'
+                )} />}
                 <span>{tab.label}</span>
                 {tab.badge && (
-                  <span className={`
-                    ml-2 px-2 py-0.5 text-xs rounded-full
-                    ${isActive ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-700 text-gray-300'}
-                  `}>
+                  <span className={clsx(
+                    'ml-2 px-2 py-0.5 text-xs font-medium rounded-full',
+                    isActive ? 'bg-cyber-500/20 text-cyber-300' : 'bg-gray-700 text-gray-400'
+                  )}>
                     {tab.badge}
                   </span>
                 )}
@@ -95,93 +91,38 @@ const Tabs = ({
           })}
         </div>
 
-        {/* Animated indicator for default variant */}
-        {variant === 'default' && (
-          <div
-            className={`
-              absolute bottom-0 h-0.5 transition-all duration-300
-              ${currentVariant.indicator}
-            `}
-            style={indicatorStyle}
+        {/* Active Indicator */}
+        {variant === 'default' && variantStyles.indicator && (
+          <motion.div
+            layoutId="activeTab"
+            className={clsx(
+              'absolute bottom-0 h-0.5',
+              variantStyles.indicator
+            )}
+            style={{
+              left: `${(tabs.findIndex(t => t.id === activeTab) / tabs.length) * 100}%`,
+              width: `${100 / tabs.length}%`,
+            }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
           />
         )}
       </div>
 
-      {/* Tab content */}
-      {tabs[activeTab]?.content && (
-        <div className="mt-4">
-          {tabs[activeTab].content}
-        </div>
-      )}
+      {/* Tab Content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="mt-4"
+        >
+          {activeTabData?.content || tabs.find(tab => tab.id === activeTab)?.render?.()}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
-};
-
-// Vertical tabs variant
-export const VerticalTabs = ({
-  tabs = [],
-  activeTab: controlledActiveTab,
-  onChange,
-  className = ''
-}) => {
-  const [internalActiveTab, setInternalActiveTab] = useState(0);
-
-  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
-  const setActiveTab = controlledActiveTab !== undefined ? onChange : setInternalActiveTab;
-
-  return (
-    <div className={`flex ${className}`}>
-      {/* Tab list */}
-      <div className="w-48 flex-shrink-0 border-r border-gray-700 pr-4">
-        <div className="space-y-1">
-          {tabs.map((tab, index) => {
-            const isActive = activeTab === index;
-            const isDisabled = tab.disabled;
-
-            return (
-              <button
-                key={index}
-                onClick={() => !isDisabled && setActiveTab(index)}
-                disabled={isDisabled}
-                className={`
-                  w-full px-4 py-2 text-left rounded-lg
-                  ${isActive 
-                    ? 'bg-cyan-500/10 text-cyan-400 border-l-2 border-cyan-500' 
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                  }
-                  ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
-                  transition-all duration-200
-                  flex items-center space-x-3
-                `}
-              >
-                {tab.icon && <span>{tab.icon}</span>}
-                <span className="flex-1">{tab.label}</span>
-                {tab.badge && (
-                  <span className={`
-                    px-2 py-0.5 text-xs rounded-full
-                    ${isActive ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-700 text-gray-300'}
-                  `}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Tab content */}
-      <div className="flex-1 pl-6">
-        {tabs[activeTab]?.content}
-      </div>
-    </div>
-  );
-};
-
-// Tab panel component for lazy loading
-export const TabPanel = ({ children, isActive }) => {
-  if (!isActive) return null;
-  return <>{children}</>;
 };
 
 export default Tabs;
