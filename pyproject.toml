@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "secunik-logx"
+version = "1.0.0"
+description = "Advanced AI-Powered Security Log Analysis Platform"
+authors = ["SecuNik Team <team@secunik.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"  # Changed from 3.11 to 3.10
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']  # Changed to py310
+
+[tool.mypy]
+python_version = "3.10"  # Changed to 3.10
+
+[tool.ruff]
+target-version = "py310"  # Changed to py310

@@ -1,0 +1,74 @@
+{
+  "version": "1.0.0",
+  "updated": "2024-01-01T00:00:00Z",
+  "categories": {
+    "yara": {
+      "path": "yara/",
+      "enabled": true,
+      "rules": [
+        {
+          "file": "malware/ransomware.yar",
+          "category": "malware",
+          "severity": "critical",
+          "enabled": true
+        },
+        {
+          "file": "malware/trojans.yar",
+          "category": "malware",
+          "severity": "high",
+          "enabled": true
+        },
+        {
+          "file": "exploits/web_shells.yar",
+          "category": "exploits",
+          "severity": "high",
+          "enabled": true
+        },
+        {
+          "file": "suspicious/suspicious_strings.yar",
+          "category": "suspicious",
+          "severity": "medium",
+          "enabled": true
+        }
+      ]
+    },
+    "sigma": {
+      "path": "sigma/",
+      "enabled": true,
+      "rules": [
+        {
+          "file": "windows/process_creation/",
+          "category": "windows",
+          "enabled": true
+        },
+        {
+          "file": "linux/auditd/",
+          "category": "linux",
+          "enabled": true
+        },
+        {
+          "file": "network/proxy/",
+          "category": "network",
+          "enabled": true
+        },
+        {
+          "file": "cloud/aws/",
+          "category": "cloud",
+          "enabled": true
+        }
+      ]
+    },
+    "custom": {
+      "path": "custom/",
+      "enabled": true,
+      "rules": []
+    }
+  },
+  "statistics": {
+    "total_rules": 0,
+    "yara_rules": 0,
+    "sigma_rules": 0,
+    "custom_rules": 0,
+    "enabled_rules": 0
+  }
+}

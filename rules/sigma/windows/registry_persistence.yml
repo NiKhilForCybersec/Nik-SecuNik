@@ -1,0 +1,406 @@
+# SecuNik LogX - Windows Registry Persistence Detection Rules
+# Author: SecuNik LogX Team
+# Date: 2024/01/01
+
+---
+title: Registry Run Key Persistence
+id: e73cf6d6-c4b0-4f72-a0cd-b2e3d0e67bd6
+status: stable
+description: Detects modifications to common registry run keys used for persistence
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx\'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\RunServices\'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\RunServicesOnce\'
+            - '\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\'
+            - '\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows\Run'
+    filter_legitimate:
+        - Image|startswith: 
+            - 'C:\Windows\'
+            - 'C:\Program Files\'
+            - 'C:\Program Files (x86)\'
+        - Details|contains: 
+            - 'Microsoft Corporation'
+            - 'Windows Defender'
+    condition: selection and not filter_legitimate
+falsepositives:
+    - Legitimate software installations
+    - Security software updates
+    - System administration scripts
+level: medium
+
+---
+title: Service Registry Modification for Persistence
+id: 7c4b33d0-4a9f-4b61-9c09-0ba94d1c11d8
+status: stable
+description: Detects modifications to service registry keys that may indicate persistence
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1543/003/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1543.003
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection_service:
+        TargetObject|contains: '\System\CurrentControlSet\Services\'
+    selection_suspicious:
+        - TargetObject|endswith:
+            - '\ImagePath'
+            - '\ServiceDLL'
+            - '\Parameters\ServiceDLL'
+        - Details|contains:
+            - 'powershell'
+            - 'cmd.exe /c'
+            - 'rundll32'
+            - 'regsvr32'
+            - 'mshta'
+            - 'wscript'
+            - 'cscript'
+            - '%TEMP%'
+            - '%APPDATA%'
+            - 'C:\Users\Public\'
+    filter_known_services:
+        TargetObject|contains:
+            - '\Services\WinDefend\'
+            - '\Services\MpsSvc\'
+            - '\Services\wscsvc\'
+            - '\Services\SecurityHealthService\'
+    condition: selection_service and selection_suspicious and not filter_known_services
+falsepositives:
+    - Legitimate service installations
+    - Software updates
+    - System administration
+level: high
+
+---
+title: Windows Defender Exclusion Registry Modification
+id: e9c8808f-4cfb-4ba9-97f4-e5332bfa7e13
+status: stable
+description: Detects modifications to Windows Defender exclusion registry keys
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1562/001/
+tags:
+    - attack.defense_evasion
+    - attack.t1562.001
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows Defender\Exclusions\Paths\'
+            - '\SOFTWARE\Microsoft\Windows Defender\Exclusions\Extensions\'
+            - '\SOFTWARE\Microsoft\Windows Defender\Exclusions\Processes\'
+            - '\SOFTWARE\Microsoft\Windows Defender\Exclusions\TemporaryPaths\'
+            - '\SOFTWARE\Policies\Microsoft\Windows Defender\Exclusions\'
+    filter_legitimate_admin:
+        Image|endswith:
+            - '\MpCmdRun.exe'
+            - '\ConfigSecurityPolicy.exe'
+            - '\MsMpEng.exe'
+    condition: selection and not filter_legitimate_admin
+falsepositives:
+    - Legitimate administrator actions
+    - Security software management
+    - Group Policy updates
+level: high
+
+---
+title: Screensaver Registry Hijacking
+id: 40b6c386-0d8f-4513-9bc8-fc0d90320e40
+status: stable
+description: Detects modifications to screensaver registry entries for persistence
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1546/002/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1546.002
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|endswith:
+            - '\Control Panel\Desktop\SCRNSAVE.EXE'
+            - '\Control Panel\Desktop\ScreenSaveActive'
+            - '\Control Panel\Desktop\ScreenSaverIsSecure'
+            - '\Control Panel\Desktop\ScreenSaveTimeOut'
+    selection_suspicious:
+        Details|contains:
+            - '.scr'
+            - '.exe'
+            - '.dll'
+            - '.bat'
+            - '.cmd'
+            - '.ps1'
+            - 'powershell'
+            - 'mshta'
+            - 'rundll32'
+    filter_default:
+        Details|contains:
+            - 'C:\Windows\System32\'
+            - 'C:\Windows\SysWOW64\'
+    condition: selection and selection_suspicious and not filter_default
+falsepositives:
+    - User customization of screensaver
+    - Corporate screensaver deployment
+level: medium
+
+---
+title: AppInit DLL Registry Modification
+id: d85cf08f-95f0-42f4-910f-21667e97d1c7
+status: stable
+description: Detects modifications to AppInit DLL registry keys used for persistence
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1546/010/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1546.010
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows\AppInit_DLLs'
+            - '\SOFTWARE\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Windows\AppInit_DLLs'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows\LoadAppInit_DLLs'
+            - '\SOFTWARE\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Windows\LoadAppInit_DLLs'
+    filter_empty:
+        Details: ''
+    condition: selection and not filter_empty
+falsepositives:
+    - Legitimate software using AppInit DLLs (rare)
+    - Some anti-virus software
+level: high
+
+---
+title: Image File Execution Options (IFEO) Registry Modification
+id: 6a4f7c45-0083-424f-a93a-29dc3e3df7d9
+status: stable
+description: Detects modifications to Image File Execution Options registry keys
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1546/012/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.defense_evasion
+    - attack.t1546.012
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|contains: '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\'
+    selection_debugger:
+        TargetObject|endswith: '\Debugger'
+    selection_suspicious:
+        Details|contains:
+            - 'powershell'
+            - 'cmd.exe'
+            - 'rundll32'
+            - 'regsvr32'
+            - 'mshta'
+            - 'wscript'
+            - 'cscript'
+            - '%TEMP%'
+            - '%APPDATA%'
+    filter_security_products:
+        TargetObject|contains:
+            - '\Image File Execution Options\MpCmdRun.exe\'
+            - '\Image File Execution Options\MsMpEng.exe\'
+            - '\Image File Execution Options\vmnat.exe\'
+            - '\Image File Execution Options\vmware'
+    condition: selection and selection_debugger and selection_suspicious and not filter_security_products
+falsepositives:
+    - Developer tools and debuggers
+    - Some security software
+level: high
+
+---
+title: Security Support Provider (SSP) Registry Modification
+id: f7fda7cf-b988-40ea-8d53-2b7c9b92d831
+status: stable
+description: Detects modifications to Security Support Provider registry keys
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1547/005/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1547.005
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\SYSTEM\CurrentControlSet\Control\Lsa\Security Packages'
+            - '\SYSTEM\CurrentControlSet\Control\Lsa\OSConfig\Security Packages'
+    filter_legitimate:
+        Details|contains:
+            - 'kerberos'
+            - 'msv1_0'
+            - 'schannel'
+            - 'tspkg'
+            - 'pku2u'
+            - 'cloudap'
+    condition: selection and not all of filter_legitimate
+falsepositives:
+    - Legitimate SSP installations
+    - Some VPN software
+level: critical
+
+---
+title: Winlogon Helper DLL Registry Modification
+id: e00c0e35-6987-4ce2-9c67-f08ca8e03c2f
+status: stable
+description: Detects modifications to Winlogon helper registry keys
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1547/004/
+tags:
+    - attack.persistence
+    - attack.t1547.004
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Notify\'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Userinit'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell'
+            - '\SOFTWARE\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Winlogon\'
+    filter_default_values:
+        Details|contains:
+            - 'userinit.exe'
+            - 'explorer.exe'
+    filter_empty:
+        Details: ''
+    condition: selection and not 1 of filter_*
+falsepositives:
+    - Legitimate system configuration changes
+    - Third-party authentication software
+level: high
+
+---
+title: COM Object Hijacking Registry Modification
+id: 5e44142c-c90f-4cc8-bca7-0256a0a63c36
+status: stable
+description: Detects registry modifications that may indicate COM object hijacking
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1546/015/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1546.015
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection_clsid:
+        TargetObject|contains:
+            - '\Software\Classes\CLSID\'
+            - '\Software\Wow6432Node\Classes\CLSID\'
+    selection_keys:
+        TargetObject|endswith:
+            - '\InprocServer32'
+            - '\LocalServer32'
+            - '\InprocHandler'
+            - '\InprocHandler32'
+            - '\TreatAs'
+            - '\ProgID'
+    selection_suspicious:
+        Details|contains:
+            - '%APPDATA%'
+            - '%TEMP%'
+            - 'C:\Users\Public\'
+            - 'C:\ProgramData\'
+            - 'C:\Windows\Temp\'
+    filter_installer:
+        Image|contains:
+            - 'msiexec.exe'
+            - 'setup.exe'
+            - 'install'
+    condition: all of selection_* and not filter_installer
+falsepositives:
+    - Legitimate software installations
+    - Developer activity
+level: medium
+
+---
+title: Accessibility Features Registry Modification
+id: f652cfbd-ecf0-4eda-b0c6-24102de8a6de
+status: stable
+description: Detects modifications to accessibility feature registry keys for backdoor access
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1546/008/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1546.008
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\utilman.exe'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\osk.exe'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\Magnify.exe'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\Narrator.exe'
+            - '\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\DisplaySwitch.exe'
+    selection_debugger:
+        TargetObject|endswith: '\Debugger'
+    selection_suspicious:
+        Details|contains:
+            - 'cmd.exe'
+            - 'powershell.exe'
+            - 'explorer.exe'
+            - 'regedit.exe'
+            - 'C:\Windows\Temp\'
+            - '%TEMP%'
+    condition: selection and selection_debugger and selection_suspicious
+falsepositives:
+    - Legitimate accessibility software
+    - System debugging by administrators
+level: critical

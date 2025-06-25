@@ -1,0 +1,547 @@
+# SecuNik LogX - Linux Suspicious Commands Detection Rules
+# Author: SecuNik LogX Team
+# Date: 2024/01/01
+
+---
+title: Linux Reverse Shell Commands
+id: a9c92820-3814-4504-b2b1-9a8ce9895272
+status: stable
+description: Detects various reverse shell command patterns on Linux systems
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1059/004/
+    - https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md
+tags:
+    - attack.execution
+    - attack.t1059.004
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_bash_tcp:
+        CommandLine|contains|all:
+            - 'bash'
+            - '/dev/tcp/'
+            - '>&'
+    selection_bash_udp:
+        CommandLine|contains|all:
+            - 'bash'
+            - '/dev/udp/'
+            - '>&'
+    selection_nc_traditional:
+        CommandLine|contains|all:
+            - 'nc '
+            - ' -e'
+            - '/bin/sh'
+    selection_nc_mkfifo:
+        CommandLine|contains|all:
+            - 'mkfifo'
+            - 'nc '
+            - '/bin/sh'
+    selection_python:
+        CommandLine|contains|all:
+            - 'python'
+            - 'socket'
+            - 'subprocess'
+            - 'connect'
+    selection_perl:
+        CommandLine|contains|all:
+            - 'perl'
+            - 'socket'
+            - 'exec'
+            - 'open'
+    selection_php:
+        CommandLine|contains|all:
+            - 'php'
+            - 'fsockopen'
+            - 'exec'
+    selection_ruby:
+        CommandLine|contains|all:
+            - 'ruby'
+            - 'TCPSocket'
+            - 'exec'
+    selection_socat:
+        CommandLine|contains|all:
+            - 'socat'
+            - 'tcp'
+            - 'exec'
+    condition: 1 of selection_*
+falsepositives:
+    - Legitimate network debugging
+    - Security testing by authorized personnel
+    - Some legitimate software using similar patterns
+level: high
+
+---
+title: Linux Privilege Escalation Attempt
+id: 82aa2c32-ab8a-4b2e-a066-045e3de69025
+status: stable
+description: Detects potential privilege escalation attempts on Linux systems
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1068/
+    - https://gtfobins.github.io/
+tags:
+    - attack.privilege_escalation
+    - attack.t1068
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_sudo_abuse:
+        CommandLine|contains:
+            - 'sudo -l'
+            - 'sudo -i'
+            - 'sudo su'
+            - 'sudo /bin/bash'
+            - 'sudo /bin/sh'
+            - 'sudo vim'
+            - 'sudo nano'
+            - 'sudo less'
+            - 'sudo more'
+            - 'sudo man'
+            - 'sudo ftp'
+            - 'sudo python'
+            - 'sudo perl'
+            - 'sudo ruby'
+    selection_suid_search:
+        CommandLine|contains:
+            - 'find / -perm -4000'
+            - 'find / -perm -u=s'
+            - 'find / -type f -perm -04000'
+            - 'find / -uid 0 -perm'
+    selection_capabilities:
+        CommandLine|contains:
+            - 'getcap -r /'
+            - 'setcap cap_setuid'
+    selection_kernel_exploit:
+        CommandLine|contains:
+            - '/tmp/exploit'
+            - '/dev/shm/exploit'
+            - 'gcc -o /tmp/'
+            - 'chmod +x /tmp/'
+            - 'chmod 777 /tmp/'
+    selection_docker_escape:
+        CommandLine|contains:
+            - 'docker run -v /:/mnt'
+            - 'docker run --privileged'
+            - 'docker run --cap-add=SYS_ADMIN'
+    condition: 1 of selection_*
+falsepositives:
+    - System administrators performing legitimate tasks
+    - Security audits
+    - Legitimate software compilation
+level: high
+
+---
+title: Linux Log Clearing Activities
+id: 8a8f1d8b-9c1e-46f4-96b4-c7cc5dc11032
+status: stable
+description: Detects attempts to clear or tamper with system logs on Linux
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1070/002/
+tags:
+    - attack.defense_evasion
+    - attack.t1070.002
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_history_clear:
+        CommandLine|contains:
+            - 'history -c'
+            - 'history -w'
+            - 'rm ~/.bash_history'
+            - 'rm ~/.zsh_history'
+            - 'rm /root/.bash_history'
+            - 'ln -sf /dev/null ~/.bash_history'
+            - 'truncate -s0 ~/.bash_history'
+            - 'export HISTFILESIZE=0'
+            - 'export HISTSIZE=0'
+            - 'unset HISTFILE'
+    selection_log_clear:
+        CommandLine|contains:
+            - 'rm /var/log/'
+            - 'rm -rf /var/log/'
+            - '> /var/log/auth.log'
+            - '> /var/log/syslog'
+            - '> /var/log/messages'
+            - '> /var/log/secure'
+            - 'truncate -s 0 /var/log/'
+            - 'shred /var/log/'
+    selection_utmp_wtmp:
+        CommandLine|contains:
+            - '> /var/log/wtmp'
+            - '> /var/log/btmp'
+            - '> /var/run/utmp'
+            - 'rm /var/log/wtmp'
+            - 'rm /var/log/btmp'
+    selection_journalctl:
+        CommandLine|contains:
+            - 'journalctl --vacuum-size=1'
+            - 'journalctl --vacuum-time=1'
+            - 'systemctl stop systemd-journald'
+    condition: 1 of selection_*
+falsepositives:
+    - Log rotation scripts
+    - System maintenance
+    - Legitimate log management
+level: high
+
+---
+title: Suspicious Network Downloads
+id: b9970b7b-7a8d-4966-bc5f-e82106e8f3bb
+status: stable
+description: Detects suspicious file downloads that may indicate malware or tool transfer
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1105/
+tags:
+    - attack.command_and_control
+    - attack.t1105
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_tools:
+        - CommandLine|contains|all:
+            - 'wget '
+            - 'http'
+        - CommandLine|contains|all:
+            - 'curl '
+            - 'http'
+            - '-o'
+        - CommandLine|contains|all:
+            - 'curl '
+            - 'http'
+            - '>'
+    selection_suspicious_locations:
+        CommandLine|contains:
+            - '/tmp/'
+            - '/dev/shm/'
+            - '/var/tmp/'
+            - '~/.local/'
+            - '/opt/'
+    selection_suspicious_sources:
+        CommandLine|contains:
+            - 'raw.githubusercontent.com'
+            - 'pastebin.com'
+            - 'gist.github.com'
+            - 'transfer.sh'
+            - 'ngrok.io'
+            - '.onion'
+            - 'mediafire.com'
+            - 'mega.nz'
+    selection_execute_after_download:
+        CommandLine|contains:
+            - '&& chmod +x'
+            - '&& chmod 777'
+            - '&& sh '
+            - '&& bash '
+            - '&& ./'
+            - '| sh'
+            - '| bash'
+            - '| python'
+            - '| perl'
+    condition: selection_tools and (selection_suspicious_locations or selection_suspicious_sources or selection_execute_after_download)
+falsepositives:
+    - Software installation scripts
+    - Development activities
+    - Legitimate file transfers
+level: medium
+
+---
+title: Linux Cron Job Manipulation
+id: 6fe14b2f-9dfa-4ce5-b7f7-48cc90a3e3c0
+status: stable
+description: Detects suspicious manipulation of cron jobs for persistence
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1053/003/
+tags:
+    - attack.persistence
+    - attack.t1053.003
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_crontab:
+        CommandLine|contains:
+            - 'crontab -e'
+            - 'crontab -l'
+            - 'crontab -r'
+    selection_direct_edit:
+        CommandLine|contains:
+            - '/etc/crontab'
+            - '/etc/cron.d/'
+            - '/etc/cron.hourly/'
+            - '/etc/cron.daily/'
+            - '/etc/cron.weekly/'
+            - '/etc/cron.monthly/'
+            - '/var/spool/cron/'
+    selection_suspicious_content:
+        CommandLine|contains:
+            - 'wget '
+            - 'curl '
+            - 'nc '
+            - '/dev/tcp/'
+            - 'bash -i'
+            - 'sh -i'
+            - '/tmp/'
+            - '/dev/shm/'
+            - 'base64 -d'
+    condition: (selection_crontab or selection_direct_edit) and selection_suspicious_content
+falsepositives:
+    - System administration
+    - Legitimate scheduled tasks
+    - Backup scripts
+level: medium
+
+---
+title: SSH Key Addition
+id: 0415654c-fa20-4507-bb8f-2b46f3a26f53
+status: stable
+description: Detects addition of SSH keys which may indicate persistence
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1098/004/
+tags:
+    - attack.persistence
+    - attack.t1098.004
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_ssh_dir:
+        CommandLine|contains:
+            - '~/.ssh/authorized_keys'
+            - '/home/*/.ssh/authorized_keys'
+            - '/root/.ssh/authorized_keys'
+    selection_commands:
+        CommandLine|contains:
+            - 'echo'
+            - '>>'
+            - 'cat'
+            - 'tee'
+            - 'cp'
+            - 'mv'
+    selection_ssh_keygen:
+        CommandLine|contains:
+            - 'ssh-keygen'
+            - 'ssh-copy-id'
+    filter_legitimate:
+        User: 'root'
+        CommandLine|contains: 'ansible'
+    condition: (selection_ssh_dir and selection_commands) or selection_ssh_keygen and not filter_legitimate
+falsepositives:
+    - Legitimate SSH key management
+    - Configuration management tools
+    - System administrators
+level: medium
+
+---
+title: Container Escape Attempts
+id: 3dd002a3-3996-4cf8-bd51-1bfee05030c8
+status: stable
+description: Detects potential container escape attempts
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1611/
+tags:
+    - attack.privilege_escalation
+    - attack.t1611
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_mount:
+        CommandLine|contains:
+            - 'mount -o bind'
+            - 'mount /dev/'
+            - 'mount -t cgroup'
+            - 'mount -t proc'
+    selection_nsenter:
+        CommandLine|contains:
+            - 'nsenter'
+            - '--mount=/proc/'
+            - '--pid=/proc/'
+            - '--target 1'
+    selection_docker_sock:
+        CommandLine|contains:
+            - '/var/run/docker.sock'
+            - 'docker.sock'
+            - 'dockerd'
+    selection_kernel_exploit:
+        CommandLine|contains:
+            - '/proc/sys/kernel/core_pattern'
+            - '/proc/sys/kernel/modprobe'
+            - 'CAP_SYS_ADMIN'
+            - 'CAP_SYS_MODULE'
+    condition: 1 of selection_*
+falsepositives:
+    - Container management operations
+    - Debugging activities
+    - Legitimate system administration
+level: high
+
+---
+title: Data Compression and Archive for Exfiltration
+id: 42b3b753-5f21-4a7a-9a93-e51bffe96d11
+status: stable
+description: Detects data compression activities that may indicate preparation for exfiltration
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1560/001/
+tags:
+    - attack.collection
+    - attack.t1560.001
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_compression:
+        CommandLine|contains:
+            - 'tar -c'
+            - 'tar -z'
+            - 'tar -j'
+            - 'zip -r'
+            - '7z a'
+            - 'rar a'
+            - 'gzip'
+            - 'bzip2'
+    selection_suspicious_locations:
+        CommandLine|contains:
+            - '/home/'
+            - '/root/'
+            - '/etc/'
+            - '/var/www/'
+            - '/opt/'
+            - '/usr/share/'
+    selection_output:
+        CommandLine|contains:
+            - '/tmp/'
+            - '/dev/shm/'
+            - '/var/tmp/'
+            - '.7z'
+            - '.rar'
+            - '.zip'
+            - '.tar.gz'
+            - '.tar.bz2'
+    selection_split:
+        CommandLine|contains:
+            - 'split -b'
+            - 'split --bytes'
+    condition: selection_compression and selection_suspicious_locations and (selection_output or selection_split)
+falsepositives:
+    - Backup operations
+    - Software deployment
+    - Legitimate data archival
+level: medium
+
+---
+title: Network Scanning and Discovery
+id: c9f88ccb-1f04-4054-82d0-1f056d0f5c23
+status: stable
+description: Detects network scanning and discovery commands
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1046/
+    - https://attack.mitre.org/techniques/T1018/
+tags:
+    - attack.discovery
+    - attack.t1046
+    - attack.t1018
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection_nmap:
+        CommandLine|contains:
+            - 'nmap '
+            - '-sS'
+            - '-sV'
+            - '-sC'
+            - '-p-'
+            - '-Pn'
+    selection_masscan:
+        CommandLine|contains:
+            - 'masscan'
+            - '--rate'
+            - '-p1-65535'
+    selection_network_tools:
+        CommandLine|contains:
+            - 'arp -a'
+            - 'arp-scan'
+            - 'netdiscover'
+            - 'nbtscan'
+            - 'ping -c'
+            - 'for i in'
+    selection_port_scan:
+        CommandLine|contains|all:
+            - 'nc '
+            - '-z'
+            - '-v'
+    selection_curl_scan:
+        CommandLine|contains|all:
+            - 'curl'
+            - 'for'
+            - 'do'
+    condition: 1 of selection_*
+falsepositives:
+    - Network administrators
+    - Security scanning
+    - Network troubleshooting
+level: medium
+
+---
+title: Suspicious System Information Discovery
+id: a9e5b4d2-3c28-4810-9771-2baf6a79f3f1
+status: stable
+description: Detects commands used for system information discovery
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1082/
+tags:
+    - attack.discovery
+    - attack.t1082
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection:
+        CommandLine|contains:
+            - 'uname -a'
+            - 'cat /etc/issue'
+            - 'cat /etc/*release'
+            - 'cat /proc/version'
+            - 'lscpu'
+            - 'lspci'
+            - 'lsusb'
+            - 'dmidecode'
+            - 'systemd-detect-virt'
+            - 'virt-what'
+            - 'hostnamectl'
+            - 'cat /proc/cpuinfo'
+            - 'cat /proc/meminfo'
+    filter_monitoring:
+        Image|endswith:
+            - '/nagios'
+            - '/zabbix'
+            - '/datadog'
+    condition: selection and not filter_monitoring
+falsepositives:
+    - System monitoring tools
+    - Inventory scripts
+    - System administrators
+level: low

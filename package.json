@@ -1,0 +1,49 @@
+{
+  "name": "secunik-logx",
+  "version": "1.0.0",
+  "description": "SecuNik LogX - Advanced Security Log Analysis Platform",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "docker-compose -f docker-compose.dev.yml up",
+    "build": "docker-compose build",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && pytest",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && flake8 . && black --check . && isort --check-only .",
+    "lint:frontend": "cd frontend && npm run lint",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd backend && black . && isort .",
+    "format:frontend": "cd frontend && npm run format",
+    "setup": "./scripts/setup.sh",
+    "download-rules": "python scripts/download_rules.py",
+    "test-parsers": "python scripts/test_parsers.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/secunik/logx.git"
+  },
+  "keywords": [
+    "security",
+    "log-analysis",
+    "forensics",
+    "SIEM",
+    "React",
+    "FastAPI"
+  ],
+  "author": "SecuNik Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/secunik/logx/issues"
+  },
+  "homepage": "https://github.com/secunik/logx#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

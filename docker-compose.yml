@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: secunik-logx-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount storage directory for persistence
+      - ./storage:/app/storage
+      - ./rules:/app/rules
+      # Mount logs directory
+      - ./logs:/app/logs
+      # For development - mount source code
+      # - ./backend:/app
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - STORAGE_PATH=/app/storage
+      - LOG_FILE=/app/logs/app.log
+      # API Keys (set via .env file)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY}
+      # CORS settings
+      - CORS_ORIGINS=http://localhost,http://localhost:3000,http://frontend:80
+    env_file:
+      - ./backend/.env
+    networks:
+      - secunik-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: secunik-logx-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - secunik-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: secunik-logx-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - secunik-network
+  #   command: redis-server --appendonly yes
+
+  # Optional: PostgreSQL for future database support (uncomment if needed)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: secunik-logx-postgres
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=secunik
+  #     - POSTGRES_PASSWORD=secunik_password
+  #     - POSTGRES_DB=secunik_logx
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - secunik-network
+
+  # Optional: Nginx reverse proxy for production (uncomment if needed)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: secunik-logx-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "443:443"
+  #     - "80:80"
+  #   volumes:
+  #     - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./docker/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - backend
+  #     - frontend
+  #   networks:
+  #     - secunik-network
+
+networks:
+  secunik-network:
+    driver: bridge
+
+volumes:
+  # Named volumes for optional services
+  redis-data:
+  postgres-data:
+
+# Development override (create docker-compose.override.yml for dev settings)
+# version: '3.8'
+# services:
+#   backend:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile.dev
+#     volumes:
+#       - ./backend:/app
+#     environment:
+#       - DEBUG=true
+#       - RELOAD=true
+#   frontend:
+#     build:
+#       context: ./frontend
+#       dockerfile: Dockerfile.dev
+#     volumes:
+#       - ./frontend:/app
+#       - /app/node_modules
+#     environment:
+#       - NODE_ENV=development

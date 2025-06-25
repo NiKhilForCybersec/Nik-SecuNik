@@ -1,0 +1,443 @@
+# SecuNik LogX - AWS Suspicious Activity Detection Rules
+# Author: SecuNik LogX Team
+# Date: 2024/01/01
+
+---
+title: AWS Root Account Usage
+id: 8e646daf-7fcd-4090-8e24-4b8b2f2a9c8c
+status: stable
+description: Detects usage of AWS root account which should be avoided for daily operations
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
+    - https://attack.mitre.org/techniques/T1078/004/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1078.004
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection:
+        userIdentity.type: 'Root'
+    filter_console_login:
+        eventName: 'ConsoleLogin'
+    filter_mfa_events:
+        eventName:
+            - 'CreateVirtualMFADevice'
+            - 'EnableMFADevice'
+    condition: selection and not filter_console_login and not filter_mfa_events
+falsepositives:
+    - Initial AWS account setup
+    - Emergency access procedures
+    - Billing operations requiring root access
+level: high
+
+---
+title: AWS IAM Privilege Escalation Attempts
+id: a8f02377-4fbb-421c-8e7b-15bdcfb2d8c5
+status: stable
+description: Detects potential IAM privilege escalation attempts through policy modifications
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1098/
+    - https://rhinosecuritylabs.com/aws/aws-privilege-escalation-methods-mitigation/
+tags:
+    - attack.privilege_escalation
+    - attack.persistence
+    - attack.t1098
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection_dangerous_actions:
+        eventName:
+            - 'AttachUserPolicy'
+            - 'AttachGroupPolicy'
+            - 'AttachRolePolicy'
+            - 'PutUserPolicy'
+            - 'PutGroupPolicy'
+            - 'PutRolePolicy'
+            - 'CreateAccessKey'
+            - 'CreateLoginProfile'
+            - 'UpdateLoginProfile'
+            - 'AddUserToGroup'
+    selection_dangerous_policies:
+        requestParameters.policyArn|contains:
+            - 'arn:aws:iam::aws:policy/AdministratorAccess'
+            - 'arn:aws:iam::aws:policy/PowerUserAccess'
+            - 'arn:aws:iam::aws:policy/IAMFullAccess'
+    selection_dangerous_permissions:
+        requestParameters.policyDocument|contains:
+            - '"Action": "*"'
+            - '"Action": ["*"]'
+            - '"Resource": "*"'
+            - '"Resource": ["*"]'
+            - 'iam:PassRole'
+            - 'iam:CreateAccessKey'
+            - 'sts:AssumeRole'
+    condition: selection_dangerous_actions and (selection_dangerous_policies or selection_dangerous_permissions)
+falsepositives:
+    - Legitimate permission management by administrators
+    - Automated IAM role creation by AWS services
+    - CloudFormation or Terraform deployments
+level: high
+
+---
+title: AWS S3 Bucket Enumeration
+id: 91668b8f-7e49-4c7f-a5fa-c5f1a3f5c481
+status: stable
+description: Detects S3 bucket enumeration activities that may indicate reconnaissance
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1087/
+tags:
+    - attack.discovery
+    - attack.t1087
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection_enum_actions:
+        eventName:
+            - 'ListBuckets'
+            - 'GetBucketAcl'
+            - 'GetBucketPolicy'
+            - 'GetBucketVersioning'
+            - 'GetBucketLogging'
+            - 'GetBucketLocation'
+            - 'GetBucketWebsite'
+            - 'ListObjects'
+            - 'ListObjectsV2'
+    failed_attempts:
+        errorCode:
+            - 'AccessDenied'
+            - 'NoSuchBucket'
+    condition: selection_enum_actions and failed_attempts
+fields:
+    - userIdentity.principalId
+    - sourceIPAddress
+    - requestParameters.bucketName
+falsepositives:
+    - S3 inventory tools
+    - Backup solutions
+    - Compliance scanning tools
+    - Legitimate administrative tasks
+level: medium
+
+---
+title: AWS EC2 Instance Anomalous Behavior
+id: 31b22e5f-8613-42e8-aa95-c0dd6dac9d4e
+status: stable
+description: Detects anomalous EC2 instance operations that may indicate compromise
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1578/
+tags:
+    - attack.defense_evasion
+    - attack.t1578
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection_suspicious_actions:
+        eventName:
+            - 'RunInstances'
+            - 'TerminateInstances'
+            - 'StopInstances'
+            - 'ModifyInstanceAttribute'
+            - 'CreateImage'
+            - 'CreateSnapshot'
+    suspicious_instance_types:
+        requestParameters.instanceType|startswith:
+            - 'p3.'
+            - 'p4.'
+            - 'g4dn.'
+            - 'x1e.'
+            - 'i3en.'
+    suspicious_modifications:
+        eventName: 'ModifyInstanceAttribute'
+        requestParameters.attribute:
+            - 'userData'
+            - 'disableApiTermination'
+            - 'instanceInitiatedShutdownBehavior'
+    unusual_regions:
+        awsRegion|not:
+            - 'us-east-1'
+            - 'us-west-2'
+            - 'eu-west-1'
+            - 'eu-central-1'
+    condition: selection_suspicious_actions and (suspicious_instance_types or suspicious_modifications or unusual_regions)
+falsepositives:
+    - Auto-scaling operations
+    - Disaster recovery procedures
+    - Development and testing activities
+level: medium
+
+---
+title: AWS CloudTrail Tampering
+id: 66c8a119-0893-4673-b602-5a82cdf91d6f
+status: stable
+description: Detects attempts to disable or modify CloudTrail logging
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1562/008/
+tags:
+    - attack.defense_evasion
+    - attack.t1562.008
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection_tampering:
+        eventName:
+            - 'StopLogging'
+            - 'DeleteTrail'
+            - 'UpdateTrail'
+            - 'PutEventSelectors'
+    selection_dangerous_updates:
+        - eventName: 'UpdateTrail'
+          requestParameters.isMultiRegionTrail: 'false'
+        - eventName: 'UpdateTrail'
+          requestParameters.enableLogFileValidation: 'false'
+        - eventName: 'PutEventSelectors'
+          requestParameters.eventSelectors.readWriteType: 'WriteOnly'
+    selection_s3_tampering:
+        eventName:
+            - 'DeleteBucket'
+            - 'DeleteBucketPolicy'
+            - 'PutBucketAcl'
+        requestParameters.bucketName|contains: 'cloudtrail'
+    condition: selection_tampering or selection_dangerous_updates or selection_s3_tampering
+falsepositives:
+    - CloudTrail maintenance by administrators
+    - Log rotation procedures
+    - Cost optimization efforts
+level: critical
+
+---
+title: AWS Credential Access via EC2 Instance Metadata
+id: f6a0bfb9-0e89-4830-b6ce-c13b970ea824
+status: stable
+description: Detects access to EC2 instance metadata service for credential theft
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1552/005/
+    - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+tags:
+    - attack.credential_access
+    - attack.t1552.005
+logsource:
+    product: aws
+    service: vpc_flow_logs
+detection:
+    selection_metadata_access:
+        destination_ip: '169.254.169.254'
+        destination_port: 80
+    selection_credential_paths:
+        http_path|contains:
+            - '/latest/meta-data/iam/security-credentials/'
+            - '/latest/meta-data/identity-credentials/'
+            - '/latest/user-data/'
+            - '/latest/dynamic/instance-identity/'
+    selection_suspicious_source:
+        source_ip|not_cidr:
+            - '10.0.0.0/8'
+            - '172.16.0.0/12'
+            - '192.168.0.0/16'
+    condition: selection_metadata_access and (selection_credential_paths or selection_suspicious_source)
+falsepositives:
+    - AWS SDK operations
+    - Instance bootstrapping scripts
+    - Legitimate automation tools
+level: high
+
+---
+title: AWS Resource Deletion Spree
+id: 16308f14-07f7-4ffe-b758-e2584186c3e9
+status: stable
+description: Detects mass deletion of AWS resources that may indicate destructive activity
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1485/
+tags:
+    - attack.impact
+    - attack.t1485
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection_delete_events:
+        eventName|startswith:
+            - 'Delete'
+            - 'Remove'
+            - 'Terminate'
+            - 'Destroy'
+    critical_deletions:
+        eventName:
+            - 'DeleteDBInstance'
+            - 'DeleteDBCluster'
+            - 'DeleteBucket'
+            - 'DeleteVpc'
+            - 'DeleteSnapshot'
+            - 'DeleteVolume'
+            - 'DeleteKeyPair'
+            - 'DeleteSecurityGroup'
+            - 'TerminateInstances'
+    filter_autoscaling:
+        userAgent|contains:
+            - 'autoscaling.amazonaws.com'
+            - 'elasticbeanstalk.amazonaws.com'
+    condition: (selection_delete_events or critical_deletions) and not filter_autoscaling
+fields:
+    - userIdentity.principalId
+    - eventName
+    - eventSource
+falsepositives:
+    - Legitimate cleanup operations
+    - Disaster recovery procedures
+    - Cost optimization activities
+    - Auto-scaling operations
+level: high
+
+---
+title: AWS Unauthorized API Calls
+id: 3afee106-1f51-4230-be13-66f279867cc8
+status: stable
+description: Detects unauthorized API calls that may indicate compromised credentials
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1078/004/
+tags:
+    - attack.initial_access
+    - attack.t1078.004
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection_errors:
+        errorCode:
+            - 'UnauthorizedOperation'
+            - 'UnauthorizedAccess'
+            - 'AccessDenied'
+            - 'TokenRefreshRequired'
+            - 'InvalidUserID.NotFound'
+    suspicious_user_agents:
+        userAgent|contains:
+            - 'python'
+            - 'curl'
+            - 'Postman'
+            - 'custom-'
+        userAgent|not_contains:
+            - 'aws-sdk'
+            - 'aws-cli'
+            - 'Boto3'
+    condition: selection_errors and suspicious_user_agents
+fields:
+    - userIdentity.principalId
+    - sourceIPAddress
+    - eventSource
+    - errorCode
+falsepositives:
+    - Misconfigured applications
+    - Expired credentials
+    - Permission changes
+    - New deployments
+level: medium
+
+---
+title: AWS GuardDuty Findings Suppression
+id: 7ca7c2bf-b0ed-49cf-a64f-2436ca8d2521
+status: stable
+description: Detects attempts to suppress or disable GuardDuty findings
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1562/008/
+tags:
+    - attack.defense_evasion
+    - attack.t1562.008
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection_guardduty:
+        eventSource: 'guardduty.amazonaws.com'
+    selection_suppression:
+        eventName:
+            - 'CreateFilter'
+            - 'UpdateFilter'
+            - 'DeleteDetector'
+            - 'UpdateDetector'
+            - 'DisassociateFromMasterAccount'
+            - 'StopMonitoringMembers'
+            - 'DeleteMembers'
+    dangerous_filters:
+        requestParameters.findingCriteria.criterion|contains:
+            - '"severity": {"gte": 7}'
+            - '"type": {"neq":'
+            - '"confidence": {"lt":'
+    detector_disabling:
+        eventName: 'UpdateDetector'
+        requestParameters.enable: 'false'
+    condition: selection_guardduty and (selection_suppression or dangerous_filters or detector_disabling)
+falsepositives:
+    - Legitimate GuardDuty tuning
+    - Managed security services
+    - Cost optimization efforts
+level: high
+
+---
+title: AWS Secrets Manager Suspicious Access
+id: da88cfed-da8a-4b5c-82e5-96f860c5e5e7
+status: stable
+description: Detects suspicious access patterns to AWS Secrets Manager
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1552/
+tags:
+    - attack.credential_access
+    - attack.t1552
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection:
+        eventSource: 'secretsmanager.amazonaws.com'
+    selection_sensitive_actions:
+        eventName:
+            - 'GetSecretValue'
+            - 'DescribeSecret'
+            - 'ListSecrets'
+            - 'BatchGetSecretValue'
+    failed_access_attempts:
+        errorCode:
+            - 'ResourceNotFoundException'
+            - 'AccessDeniedException'
+            - 'DecryptionFailure'
+    cross_account_access:
+        userIdentity.accountId|not_equals: recipientAccountId
+    unusual_access_patterns:
+        userAgent|not_contains: 'aws-sdk'
+    condition: selection and selection_sensitive_actions and (failed_access_attempts or cross_account_access or unusual_access_patterns)
+fields:
+    - userIdentity.principalId
+    - eventName
+    - requestParameters.secretId
+    - sourceIPAddress
+falsepositives:
+    - Application deployments
+    - Legitimate cross-account access
+    - Secret rotation procedures
+    - CI/CD pipelines
+level: high

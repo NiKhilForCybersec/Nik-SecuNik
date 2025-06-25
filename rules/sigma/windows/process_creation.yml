@@ -1,0 +1,435 @@
+# SecuNik LogX - Windows Process Creation Detection Rules
+# Author: SecuNik LogX Team
+# Date: 2024/01/01
+
+---
+title: Suspicious PowerShell Download Cradle
+id: 8f112e66-5b15-4baf-bd3c-fd0c3e5b7e23
+status: stable
+description: Detects PowerShell download cradles commonly used by malware
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+    - https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/invoke-webrequest
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.defense_evasion
+    - attack.t1027
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_powershell:
+        - Image|endswith: '\powershell.exe'
+        - Image|endswith: '\pwsh.exe'
+        - OriginalFileName:
+            - 'PowerShell.EXE'
+            - 'pwsh.dll'
+    selection_download:
+        CommandLine|contains:
+            - 'Invoke-WebRequest'
+            - 'iwr '
+            - 'wget '
+            - 'curl '
+            - 'Net.WebClient'
+            - 'DownloadString'
+            - 'DownloadFile'
+            - 'DownloadData'
+            - 'Invoke-RestMethod'
+            - 'irm '
+    condition: all of selection_*
+falsepositives:
+    - Legitimate PowerShell scripts that download content
+    - Software installation scripts
+    - System administration tasks
+level: high
+
+---
+title: Living Off The Land Binary (LOLBin) Abuse
+id: 7f83b445-8d3a-4b5e-9b91-3e8f0c3cdf82
+status: stable
+description: Detects abuse of legitimate Windows binaries for malicious purposes
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://lolbas-project.github.io/
+tags:
+    - attack.defense_evasion
+    - attack.t1218
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_lolbin:
+        Image|endswith:
+            - '\rundll32.exe'
+            - '\regsvr32.exe'
+            - '\mshta.exe'
+            - '\cscript.exe'
+            - '\wscript.exe'
+            - '\certutil.exe'
+            - '\bitsadmin.exe'
+            - '\msiexec.exe'
+    selection_suspicious_args:
+        CommandLine|contains:
+            - 'http://'
+            - 'https://'
+            - 'ftp://'
+            - '.dll,#'
+            - 'javascript:'
+            - 'vbscript:'
+            - '-decode'
+            - '-urlcache'
+            - '/transfer'
+    filter_legitimate:
+        CommandLine|contains:
+            - 'windows\\system32\\' 
+            - 'program files'
+            - 'windows\\winsxs\\'
+    condition: selection_lolbin and selection_suspicious_args and not filter_legitimate
+falsepositives:
+    - Legitimate software installations
+    - Windows updates
+    - Administrative scripts
+level: high
+
+---
+title: Suspicious Parent-Child Process Relationship
+id: c3e76af2-ce49-4a13-b4f0-0e6e2d2a0c39
+status: stable
+description: Detects suspicious process relationships often used in exploitation
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1055/
+tags:
+    - attack.privilege_escalation
+    - attack.defense_evasion
+    - attack.t1055
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_parent:
+        ParentImage|endswith:
+            - '\winword.exe'
+            - '\excel.exe'
+            - '\powerpnt.exe'
+            - '\outlook.exe'
+            - '\mspub.exe'
+            - '\visio.exe'
+            - '\onenote.exe'
+            - '\msaccess.exe'
+            - '\firefox.exe'
+            - '\chrome.exe'
+            - '\iexplore.exe'
+            - '\edge.exe'
+    selection_child:
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+            - '\pwsh.exe'
+            - '\wscript.exe'
+            - '\cscript.exe'
+            - '\rundll32.exe'
+            - '\regsvr32.exe'
+            - '\mshta.exe'
+            - '\wmic.exe'
+    condition: selection_parent and selection_child
+falsepositives:
+    - Legitimate macros and plugins
+    - Development environments
+    - Some PDF readers with scripting capabilities
+level: high
+
+---
+title: Process Masquerading - Suspicious Process Location
+id: e4a6b256-3e47-40f8-89d2-5b08afee3e56
+status: stable
+description: Detects processes running from suspicious locations that may indicate masquerading
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1036/
+tags:
+    - attack.defense_evasion
+    - attack.t1036
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_system_process:
+        Image|endswith:
+            - '\svchost.exe'
+            - '\rundll32.exe'
+            - '\services.exe'
+            - '\lsass.exe'
+            - '\csrss.exe'
+            - '\smss.exe'
+            - '\winlogon.exe'
+            - '\explorer.exe'
+            - '\taskhost.exe'
+            - '\spoolsv.exe'
+    filter_legitimate_location:
+        Image|startswith:
+            - 'C:\Windows\System32\'
+            - 'C:\Windows\SysWOW64\'
+            - 'C:\Windows\explorer.exe'
+            - 'C:\Windows\winsxs\'
+    condition: selection_system_process and not filter_legitimate_location
+falsepositives:
+    - Unknown
+level: critical
+
+---
+title: WMI Process Execution
+id: d21374ff-f574-44a0-9b71-cfb1a7de4c3e
+status: stable
+description: Detects process execution via Windows Management Instrumentation
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1047/
+tags:
+    - attack.execution
+    - attack.t1047
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_wmi_parent:
+        ParentImage|endswith:
+            - '\wmiprvse.exe'
+            - '\mmc.exe'
+            - '\services.exe'
+            - '\svchost.exe'
+    selection_wmi_child:
+        - CommandLine|contains|all:
+            - 'wmic'
+            - 'process'
+            - 'call'
+            - 'create'
+        - CommandLine|contains:
+            - 'wmic.exe /node:'
+            - 'wmic /node:'
+    condition: selection_wmi_parent or selection_wmi_child
+falsepositives:
+    - Legitimate administrative activity
+    - Software inventory tools
+    - System monitoring solutions
+level: medium
+
+---
+title: Base64 Encoded PowerShell Command
+id: e62c5e5d-f991-4404-9f87-d821fd305f9f
+status: stable
+description: Detects base64 encoded PowerShell commands often used to evade detection
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+    - https://attack.mitre.org/techniques/T1027/
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.defense_evasion
+    - attack.t1027
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_powershell:
+        - Image|endswith: '\powershell.exe'
+        - Image|endswith: '\pwsh.exe'
+    selection_encoded:
+        CommandLine|contains:
+            - ' -enc '
+            - ' -EncodedCommand '
+            - ' -ec '
+            - ' -e '
+    filter_short:
+        CommandLine|re: '(?i)\s-e(nc|c|ncodedcommand)?\s[a-z0-9+/]{1,30}(\s|$)'
+    condition: selection_powershell and selection_encoded and not filter_short
+falsepositives:
+    - Legitimate administrative scripts
+    - Some commercial software uses encoded commands
+level: high
+
+---
+title: Renamed Windows System Binary
+id: 36480ae1-a1cb-4eaa-a0d6-29e9bf71c41a
+status: stable
+description: Detects execution of renamed Windows system binaries
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1036/003/
+tags:
+    - attack.defense_evasion
+    - attack.t1036.003
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        OriginalFileName:
+            - 'PowerShell.EXE'
+            - 'pwsh.dll'
+            - 'cmd.exe'
+            - 'cscript.exe'
+            - 'wscript.exe'
+            - 'mshta.exe'
+            - 'rundll32.exe'
+            - 'regsvr32.exe'
+            - 'wmic.exe'
+            - 'certutil.exe'
+    filter:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+            - '\cmd.exe'
+            - '\cscript.exe'
+            - '\wscript.exe'
+            - '\mshta.exe'
+            - '\rundll32.exe'
+            - '\regsvr32.exe'
+            - '\wmic.exe'
+            - '\certutil.exe'
+    condition: selection and not filter
+falsepositives:
+    - Unknown
+level: critical
+
+---
+title: Suspicious Scheduled Task Creation
+id: 6f3e2987-db24-4c78-a860-b4f4095a7095
+status: stable
+description: Detects creation of scheduled tasks with suspicious properties
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1053/005/
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1053.005
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_schtasks:
+        Image|endswith: '\schtasks.exe'
+        CommandLine|contains: ' /create '
+    selection_suspicious:
+        CommandLine|contains:
+            - ' /ru system'
+            - ' /ru "NT AUTHORITY\SYSTEM"'
+            - ' /sc onlogon'
+            - ' /sc onstart'
+            - ' /sc minute '
+            - ' /rl highest'
+            - 'http://'
+            - 'https://'
+            - '%TEMP%'
+            - '%APPDATA%'
+            - 'C:\Users\Public\'
+            - 'C:\Windows\Temp\'
+    condition: all of selection_*
+falsepositives:
+    - Legitimate software installation
+    - Administrative maintenance tasks
+level: high
+
+---
+title: Shadow Copy Deletion
+id: c947b146-0abc-4c87-9c64-b17e9d7274a2
+status: stable
+description: Detects deletion of shadow copies often used by ransomware
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1490/
+tags:
+    - attack.impact
+    - attack.t1490
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_vssadmin:
+        Image|endswith: '\vssadmin.exe'
+        CommandLine|contains:
+            - 'delete shadows'
+            - 'delete catalog'
+            - 'resize shadowstorage'
+    selection_wmic:
+        Image|endswith: '\wmic.exe'
+        CommandLine|contains:
+            - 'shadowcopy delete'
+            - 'shadowcopy where'
+    selection_bcdedit:
+        Image|endswith: '\bcdedit.exe'
+        CommandLine|contains:
+            - 'recoveryenabled no'
+            - 'bootstatuspolicy ignoreallfailures'
+    selection_wbadmin:
+        Image|endswith: '\wbadmin.exe'
+        CommandLine|contains:
+            - 'delete backup'
+            - 'delete catalog'
+            - 'delete systemstatebackup'
+    condition: 1 of selection_*
+falsepositives:
+    - Legitimate administrator tasks
+    - Backup software operations
+level: critical
+
+---
+title: BITS Job for Persistence or Download
+id: c24b6ac4-8f9c-4b27-9afc-b51c1e40e6a0
+status: stable
+description: Detects suspicious use of Background Intelligent Transfer Service
+author: SecuNik LogX
+date: 2024-01-01
+references:
+    - https://attack.mitre.org/techniques/T1197/
+tags:
+    - attack.defense_evasion
+    - attack.persistence
+    - attack.t1197
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_bitsadmin:
+        Image|endswith: '\bitsadmin.exe'
+    selection_action:
+        CommandLine|contains:
+            - '/transfer'
+            - '/addfile'
+            - '/SetNotifyFlags'
+            - '/SetNotifyCmdLine'
+            - '/SetPriority'
+            - '/Resume'
+    selection_suspicious:
+        CommandLine|contains:
+            - 'http://'
+            - 'https://'
+            - 'ftp://'
+            - '%TEMP%'
+            - '%APPDATA%'
+            - '\AppData\'
+            - 'C:\Users\Public\'
+    filter_whitelist:
+        CommandLine|contains:
+            - 'download.microsoft.com'
+            - 'download.windowsupdate.com'
+            - 'windowsupdate.microsoft.com'
+    condition: selection_bitsadmin and selection_action and selection_suspicious and not filter_whitelist
+falsepositives:
+    - Legitimate software using BITS
+    - Windows Update operations
+    - Enterprise software deployment
+level: medium
