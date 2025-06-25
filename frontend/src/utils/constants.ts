@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
-  MAX_FILE_SIZE: 500 * 1024 * 1024, // 500MB
-  ALLOWED_FILE_TYPES: [
+  MAX_FILE_SIZE: parseInt(import.meta.env.VITE_MAX_FILE_SIZE) || 1073741824, // 1GB
+  ALLOWED_FILE_TYPES: import.meta.env.VITE_ALLOWED_FILE_TYPES?.split(',') || [
     // Log files
     '.log', '.txt', '.syslog',
     // Network captures
@@ -23,7 +23,7 @@ export const API_CONFIG = {
     // Binary files
     '.exe', '.dll', '.so'
   ],
-  UPLOAD_CHUNK_SIZE: 1024 * 1024, // 1MB chunks
+  UPLOAD_CHUNK_SIZE: parseInt(import.meta.env.VITE_CHUNK_SIZE) || 1024 * 1024, // 1MB chunks
   MAX_CONCURRENT_UPLOADS: 3
 }
 
@@ -92,10 +92,10 @@ export const WS_EVENTS = {
 
 // UI Constants
 export const UI_CONFIG = {
-  ITEMS_PER_PAGE: 20,
-  DEBOUNCE_DELAY: 300,
-  TOAST_DURATION: 4000,
-  ANIMATION_DURATION: 300
+  ITEMS_PER_PAGE: parseInt(import.meta.env.VITE_ITEMS_PER_PAGE) || 20,
+  DEBOUNCE_DELAY: parseInt(import.meta.env.VITE_DEBOUNCE_DELAY) || 300,
+  TOAST_DURATION: parseInt(import.meta.env.VITE_TOAST_DURATION) || 4000,
+  ANIMATION_DURATION: parseInt(import.meta.env.VITE_ANIMATION_DURATION) || 300
 }
 
 // Color Schemes
