@@ -605,3 +605,29 @@ async def notify_analysis_error(analysis_id: str, error: str):
         "error": error,
         "timestamp": datetime.utcnow().isoformat()
     })
+# WebSocket routes
+@router.websocket("/analysis/{analysis_id}")
+async def websocket_analysis_endpoint(
+    websocket: WebSocket,
+    analysis_id: str,
+    token: Optional[str] = Query(None)
+):
+    """WebSocket endpoint for analysis updates"""
+    await websocket_endpoint(
+        websocket,
+        client_id=f"analysis_{analysis_id}",
+        token=token
+    )
+    
+    # Auto-subscribe to analysis topic
+    await ws_manager.subscribe(f"analysis_{analysis_id}", f"analysis:{analysis_id}")
+
+
+@router.websocket("/connect")
+async def websocket_connect_endpoint(
+    websocket: WebSocket,
+    client_id: Optional[str] = Query(None),
+    token: Optional[str] = Query(None)
+):
+    """General WebSocket endpoint"""
+    await websocket_endpoint(websocket, client_id, token)
