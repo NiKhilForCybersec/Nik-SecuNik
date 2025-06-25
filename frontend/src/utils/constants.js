@@ -1,105 +1,160 @@
-// API endpoints
-export const API_ENDPOINTS = {
-  // Upload
-  UPLOAD: '/upload',
-  UPLOAD_FILE: '/upload/file',
-  UPLOAD_BATCH: '/upload/batch',
-  UPLOAD_STATUS: '/upload/status',
-  SUPPORTED_FORMATS: '/upload/supported-formats',
-  
-  // Analysis
-  ANALYSIS: '/analysis',
-  ANALYSIS_START: '/analysis/start',
-  ANALYSIS_STATUS: '/analysis/status',
-  ANALYSIS_RESULTS: '/analysis/results',
-  ANALYSIS_EXPORT: '/analysis/export',
-  
-  // History
-  HISTORY: '/history',
-  HISTORY_SEARCH: '/history/search',
-  HISTORY_DELETE: '/history/delete',
-  
-  // Rules
-  RULES: '/rules',
-  RULES_IMPORT: '/rules/import',
-  RULES_EXPORT: '/rules/export',
-  RULES_TEST: '/rules/test',
-  RULES_SYNC: '/rules/sync',
-  
-  // VirusTotal
-  VT_SCAN: '/virustotal/scan',
-  VT_REPORT: '/virustotal/report',
-  
-  // WebSocket
-  WS_ANALYSIS: '/ws/analysis',
-};
+// API Configuration
+export const API_CONFIG = {
+  MAX_FILE_SIZE: 500 * 1024 * 1024, // 500MB
+  ALLOWED_FILE_TYPES: [
+    // Log files
+    '.log', '.txt', '.syslog',
+    // Network captures
+    '.pcap', '.pcapng', '.cap',
+    // Archives
+    '.zip', '.rar', '.7z', '.tar', '.gz',
+    // Email files
+    '.eml', '.msg', '.mbox',
+    // System files
+    '.evt', '.evtx', '.reg',
+    // Database files
+    '.sql', '.db', '.sqlite',
+    // Structured data
+    '.json', '.xml', '.csv', '.yaml', '.yml',
+    // Documents
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+    // Code files
+    '.js', '.py', '.sh', '.ps1', '.bat',
+    // Binary files
+    '.exe', '.dll', '.so'
+  ],
+  UPLOAD_CHUNK_SIZE: 1024 * 1024, // 1MB chunks
+  MAX_CONCURRENT_UPLOADS: 3
+}
 
-// File size limits
-export const FILE_SIZE = {
-  MAX_UPLOAD: 500 * 1024 * 1024, // 500MB
-  MAX_BATCH: 2 * 1024 * 1024 * 1024, // 2GB
-  CHUNK_SIZE: 10 * 1024 * 1024, // 10MB chunks
-};
+// Analysis Configuration
+export const ANALYSIS_CONFIG = {
+  ANALYZERS: {
+    YARA: 'yara',
+    SIGMA: 'sigma',
+    MITRE: 'mitre',
+    AI: 'ai',
+    IOC: 'ioc',
+    PATTERN: 'pattern'
+  },
+  PRIORITIES: {
+    LOW: 'low',
+    NORMAL: 'normal',
+    HIGH: 'high'
+  },
+  STATUSES: {
+    QUEUED: 'queued',
+    PROCESSING: 'processing',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+    CANCELLED: 'cancelled'
+  }
+}
 
-// Analysis stages
-export const ANALYSIS_STAGES = {
-  UPLOADED: 'uploaded',
-  PARSING: 'parsing',
-  ANALYZING: 'analyzing',
-  ENRICHING: 'enriching',
-  COMPLETE: 'complete',
-  ERROR: 'error',
-};
+// Threat Levels
+export const THREAT_LEVELS = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
+  CRITICAL: 'critical'
+}
 
-// Rule types
+// Rule Types
 export const RULE_TYPES = {
   YARA: 'yara',
   SIGMA: 'sigma',
-  CUSTOM: 'custom',
-  COMMUNITY: 'community',
-};
+  CUSTOM: 'custom'
+}
 
-// Severity levels
-export const SEVERITY_LEVELS = {
-  CRITICAL: 'critical',
-  HIGH: 'high',
-  MEDIUM: 'medium',
-  LOW: 'low',
-  INFO: 'info',
-};
+// File Type Categories
+export const FILE_CATEGORIES = {
+  LOGS: 'logs',
+  NETWORK: 'network',
+  SYSTEM: 'system',
+  EMAIL: 'email',
+  DOCUMENTS: 'documents',
+  ARCHIVES: 'archives',
+  CODE: 'code',
+  DATABASE: 'database',
+  FORENSICS: 'forensics',
+  MOBILE: 'mobile',
+  CLOUD: 'cloud'
+}
 
-// WebSocket events
+// WebSocket Events
 export const WS_EVENTS = {
-  CONNECT: 'connect',
-  DISCONNECT: 'disconnect',
-  ANALYSIS_UPDATE: 'analysis_update',
+  ANALYSIS_PROGRESS: 'analysis_progress',
   ANALYSIS_COMPLETE: 'analysis_complete',
   ANALYSIS_ERROR: 'analysis_error',
-  NOTIFICATION: 'notification',
-};
+  SYSTEM_STATUS: 'system_status',
+  THREAT_ALERT: 'threat_alert'
+}
 
-// Storage keys
-export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'auth_token',
-  THEME: 'theme',
-  PREFERENCES: 'user_preferences',
-  RECENT_SEARCHES: 'recent_searches',
-};
+// UI Constants
+export const UI_CONFIG = {
+  ITEMS_PER_PAGE: 20,
+  DEBOUNCE_DELAY: 300,
+  TOAST_DURATION: 4000,
+  ANIMATION_DURATION: 300
+}
 
-// Pagination defaults
-export const PAGINATION = {
-  DEFAULT_PAGE_SIZE: 20,
-  PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
-};
+// Color Schemes
+export const COLORS = {
+  THREAT_LEVELS: {
+    low: 'text-green-400 bg-green-900/30',
+    medium: 'text-yellow-400 bg-yellow-900/30',
+    high: 'text-orange-400 bg-orange-900/30',
+    critical: 'text-red-400 bg-red-900/30'
+  },
+  STATUS: {
+    queued: 'text-blue-400 bg-blue-900/30',
+    processing: 'text-yellow-400 bg-yellow-900/30',
+    completed: 'text-green-400 bg-green-900/30',
+    failed: 'text-red-400 bg-red-900/30',
+    cancelled: 'text-gray-400 bg-gray-900/30'
+  },
+  SEVERITY: {
+    info: 'text-blue-400 bg-blue-900/30',
+    low: 'text-green-400 bg-green-900/30',
+    medium: 'text-yellow-400 bg-yellow-900/30',
+    high: 'text-orange-400 bg-orange-900/30',
+    critical: 'text-red-400 bg-red-900/30'
+  }
+}
 
-// Toast messages
-export const TOAST_MESSAGES = {
-  UPLOAD_SUCCESS: 'File uploaded successfully',
-  UPLOAD_ERROR: 'Failed to upload file',
-  ANALYSIS_STARTED: 'Analysis started',
-  ANALYSIS_COMPLETE: 'Analysis completed',
-  RULE_SAVED: 'Rule saved successfully',
-  RULE_DELETED: 'Rule deleted successfully',
-  EXPORT_SUCCESS: 'Export completed',
-  EXPORT_ERROR: 'Export failed',
-};
+// MITRE ATT&CK Tactics
+export const MITRE_TACTICS = {
+  'initial-access': 'Initial Access',
+  'execution': 'Execution',
+  'persistence': 'Persistence',
+  'privilege-escalation': 'Privilege Escalation',
+  'defense-evasion': 'Defense Evasion',
+  'credential-access': 'Credential Access',
+  'discovery': 'Discovery',
+  'lateral-movement': 'Lateral Movement',
+  'collection': 'Collection',
+  'command-and-control': 'Command and Control',
+  'exfiltration': 'Exfiltration',
+  'impact': 'Impact'
+}
+
+// IOC Types
+export const IOC_TYPES = {
+  IP: 'ip_address',
+  DOMAIN: 'domain',
+  URL: 'url',
+  HASH: 'hash',
+  EMAIL: 'email',
+  FILE_PATH: 'file_path',
+  REGISTRY_KEY: 'registry_key',
+  MUTEX: 'mutex',
+  USER_AGENT: 'user_agent'
+}
+
+// Export formats
+export const EXPORT_FORMATS = {
+  JSON: 'json',
+  CSV: 'csv',
+  PDF: 'pdf',
+  XML: 'xml'
+}

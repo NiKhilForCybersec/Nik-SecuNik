@@ -1,129 +1,107 @@
-import api, { apiHelpers } from './api';
-import { API_ENDPOINTS } from '@/utils/constants';
+import apiClient from './api'
 
-class RulesService {
-  /**
-   * Get all rules with filters
-   */
+export const rulesService = {
+  // Get rules
   async getRules(params = {}) {
-    const queryString = apiHelpers.buildQueryString(params);
-    const response = await api.get(`${API_ENDPOINTS.RULES}${queryString}`);
-    return response.data;
-  }
+    try {
+      const queryParams = new URLSearchParams()
+      
+      if (params.type) queryParams.append('type', params.type)
+      if (params.category) queryParams.append('category', params.category)
+      if (params.enabled !== undefined) queryParams.append('enabled', params.enabled)
+      if (params.search) queryParams.append('search', params.search)
 
-  /**
-   * Get rule by ID
-   */
-  async getRule(id) {
-    const response = await api.get(`${API_ENDPOINTS.RULES}/${id}`);
-    return response.data;
-  }
+      const response = await apiClient.get(`/rules?${queryParams.toString()}`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Create new rule
-   */
+  // Create rule
   async createRule(ruleData) {
-    const response = await api.post(API_ENDPOINTS.RULES, ruleData);
-    return response.data;
-  }
+    try {
+      const response = await apiClient.post('/rules', ruleData)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Update rule
-   */
-  async updateRule(id, ruleData) {
-    const response = await api.put(`${API_ENDPOINTS.RULES}/${id}`, ruleData);
-    return response.data;
-  }
+  // Update rule
+  async updateRule(ruleId, ruleData) {
+    try {
+      const response = await apiClient.put(`/rules/${ruleId}`, ruleData)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Delete rule
-   */
-  async deleteRule(id) {
-    const response = await api.delete(`${API_ENDPOINTS.RULES}/${id}`);
-    return response.data;
-  }
+  // Delete rule
+  async deleteRule(ruleId) {
+    try {
+      const response = await apiClient.delete(`/rules/${ruleId}`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Delete multiple rules
-   */
-  async deleteRules(ids) {
-    const response = await api.post(`${API_ENDPOINTS.RULES}/delete-batch`, { ids });
-    return response.data;
-  }
+  // Test rule
+  async testRule(ruleData, testData) {
+    try {
+      const response = await apiClient.post('/rules/test', {
+        rule: ruleData,
+        test_data: testData
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Import rules from file
-   */
-  async importRules(file, options = {}) {
-    const formData = new FormData();
-    formData.append('file', file);
-    Object.entries(options).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
+  // Import rules
+  async importRules(file) {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
 
-    const response = await api.post(API_ENDPOINTS.RULES_IMPORT, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
+      const response = await apiClient.post('/rules/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Export rules
-   */
-  async exportRules(format = 'json', filters = {}) {
-    const queryString = apiHelpers.buildQueryString({ format, ...filters });
-    await apiHelpers.downloadFile(
-      `${API_ENDPOINTS.RULES_EXPORT}${queryString}`,
-      `rules_export_${Date.now()}.${format}`
-    );
-  }
+  // Export rules
+  async exportRules(format = 'json') {
+    try {
+      const response = await apiClient.get(`/rules/export/${format}`, {
+        responseType: 'blob'
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Test rule against sample data
-   */
-  async testRule(ruleId, testData) {
-    const response = await api.post(`${API_ENDPOINTS.RULES_TEST}/${ruleId}`, testData);
-    return response.data;
-  }
-
-  /**
-   * Sync rules from repository
-   */
-  async syncRules(syncConfig) {
-    const response = await api.post(API_ENDPOINTS.RULES_SYNC, syncConfig);
-    return response.data;
-  }
-
-  /**
-   * Get rule statistics
-   */
-  async getRuleStats() {
-    const response = await api.get(`${API_ENDPOINTS.RULES}/stats`);
-    return response.data;
-  }
-
-  /**
-   * Enable/disable rule
-   */
-  async toggleRule(id, enabled) {
-    const response = await api.patch(`${API_ENDPOINTS.RULES}/${id}/toggle`, { enabled });
-    return response.data;
-  }
-
-  /**
-   * Validate rule syntax
-   */
-  async validateRule(ruleContent, ruleType) {
-    const response = await api.post(`${API_ENDPOINTS.RULES}/validate`, {
-      content: ruleContent,
-      type: ruleType,
-    });
-    return response.data;
+  handleError(error) {
+    if (error.response?.data) {
+      return {
+        error: error.response.data.error || 'Rules operation failed',
+        message: error.response.data.message || 'An error occurred',
+        details: error.response.data.details || {}
+      }
+    }
+    return {
+      error: 'NetworkError',
+      message: 'Failed to connect to server',
+      details: {}
+    }
   }
 }
-
-// Create and export singleton instance
-const rulesService = new RulesService();
-export { rulesService };

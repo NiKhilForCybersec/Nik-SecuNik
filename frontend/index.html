@@ -1,139 +1,14 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/shield.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="SecuNik LogX - Advanced Security Log Analysis Platform for comprehensive threat detection and forensic analysis" />
-    <meta name="keywords" content="security, log analysis, threat detection, forensics, SIEM, cybersecurity" />
-    <meta name="author" content="SecuNik Team" />
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://secunik-logx.com/" />
-    <meta property="og:title" content="SecuNik LogX - Security Log Analysis Platform" />
-    <meta property="og:description" content="Advanced threat detection and forensic analysis for security professionals" />
-    <meta property="og:image" content="/og-image.png" />
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://secunik-logx.com/" />
-    <meta property="twitter:title" content="SecuNik LogX" />
-    <meta property="twitter:description" content="Advanced threat detection and forensic analysis platform" />
-    <meta property="twitter:image" content="/twitter-image.png" />
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
-    
-    <!-- Theme Color -->
-    <meta name="theme-color" content="#06b6d4" />
-    
-    <!-- Security Headers -->
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' ws: wss: http://localhost:* https://api.virustotal.com;" />
-    
-    <title>SecuNik LogX - Security Analysis Platform</title>
-    
-    <!-- Preconnect to external domains -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    
-    <!-- Critical CSS (optional - for faster initial render) -->
-    <style>
-      /* Minimal critical CSS for initial render */
-      body {
-        margin: 0;
-        background-color: #111827;
-        color: #f3f4f6;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      }
-      
-      #root {
-        min-height: 100vh;
-      }
-      
-      /* Loading spinner for initial load */
-      .app-loader {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #111827;
-        z-index: 9999;
-      }
-      
-      .app-loader-spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid rgba(6, 182, 212, 0.2);
-        border-top-color: #06b6d4;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      
-      /* Noscript styles */
-      noscript {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        background-color: #111827;
-        color: #f3f4f6;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        padding: 2rem;
-        text-align: center;
-      }
-    </style>
+    <title>SecuNik LogX - Cybersecurity Analysis Platform</title>
+    <meta name="description" content="Advanced cybersecurity log analysis and threat detection platform" />
   </head>
-  <body>
-    <!-- Loading spinner - will be replaced by React app -->
-    <div id="root">
-      <div class="app-loader">
-        <div class="app-loader-spinner"></div>
-      </div>
-    </div>
-    
-    <!-- Noscript fallback -->
-    <noscript>
-      <div>
-        <h1 style="font-size: 2rem; margin-bottom: 1rem; color: #06b6d4;">JavaScript Required</h1>
-        <p style="font-size: 1.125rem; color: #9ca3af; max-width: 500px;">
-          SecuNik LogX requires JavaScript to be enabled in your browser. 
-          Please enable JavaScript and reload the page to continue.
-        </p>
-      </div>
-    </noscript>
-    
-    <!-- App entry point -->
-    <script type="module" src="/src/main.jsx"></script>
-    
-    <!-- Remove loader once app loads -->
-    <script>
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          const loader = document.querySelector('.app-loader');
-          if (loader) {
-            loader.style.opacity = '0';
-            loader.style.transition = 'opacity 0.3s ease-out';
-            setTimeout(function() {
-              loader.remove();
-            }, 300);
-          }
-        }, 100);
-      });
-    </script>
+  <body class="bg-slate-950 text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

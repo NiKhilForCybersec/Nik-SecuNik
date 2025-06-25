@@ -4,161 +4,98 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Primary cyber colors
-        cyber: {
-          50: '#ecfeff',
-          100: '#cffafe',
-          200: '#a5f3fc',
-          300: '#67e8f9',
-          400: '#22d3ee',
-          500: '#06b6d4',
-          600: '#0891b2',
-          700: '#0e7490',
-          800: '#155e75',
-          900: '#164e63',
-          950: '#083344',
+        primary: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+          950: '#172554',
         },
-        
-        // Neon accent colors
-        neon: {
-          blue: '#00d4ff',
-          green: '#00ff88',
-          purple: '#9333ea',
-          pink: '#ff0080',
-          yellow: '#ffff00',
-          orange: '#ff8800',
+        success: {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+          950: '#052e16',
         },
-        
-        // Dark theme colors
+        warning: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+          950: '#451a03',
+        },
+        danger: {
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+          950: '#450a0a',
+        },
         dark: {
-          50: '#18181b',
-          100: '#27272a',
-          200: '#3f3f46',
-          300: '#52525b',
-          400: '#71717a',
-          500: '#a1a1aa',
-          600: '#d4d4d8',
-          700: '#e4e4e7',
-          800: '#f4f4f5',
-          900: '#fafafa',
-        },
-        
-        // Status colors
-        status: {
-          success: '#10b981',
-          warning: '#f59e0b',
-          error: '#ef4444',
-          info: '#3b82f6',
-        },
-        
-        // Threat level colors
-        threat: {
-          critical: '#dc2626',
-          high: '#ea580c',
-          medium: '#f59e0b',
-          low: '#84cc16',
-          info: '#06b6d4',
-        },
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+          950: '#020617',
+        }
       },
-      
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
-        cyber: ['Orbitron', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Consolas', 'monospace'],
       },
-      
-      fontSize: {
-        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
-      },
-      
       animation: {
-        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'glow': 'glow 2s ease-in-out infinite alternate',
-        'scan': 'scan 3s ease-in-out infinite',
-        'flicker': 'flicker 2s infinite',
-        'slide-up': 'slide-up 0.3s ease-out',
-        'slide-down': 'slide-down 0.3s ease-out',
-        'fade-in': 'fade-in 0.2s ease-out',
-        'progress': 'progress 2s ease-in-out infinite',
-        'matrix': 'matrix 20s linear infinite',
       },
-      
       keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
         glow: {
-          'from': { 
-            textShadow: '0 0 10px #00d4ff, 0 0 20px #00d4ff, 0 0 30px #00d4ff',
-            filter: 'brightness(1)',
-          },
-          'to': { 
-            textShadow: '0 0 20px #00d4ff, 0 0 30px #00d4ff, 0 0 40px #00d4ff',
-            filter: 'brightness(1.1)',
-          },
+          '0%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)' },
+          '100%': { boxShadow: '0 0 30px rgba(59, 130, 246, 0.6)' },
         },
-        scan: {
-          '0%': { transform: 'translateY(-100%)' },
-          '100%': { transform: 'translateY(100%)' },
-        },
-        flicker: {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.8 },
-        },
-        'slide-up': {
-          '0%': { transform: 'translateY(10px)', opacity: 0 },
-          '100%': { transform: 'translateY(0)', opacity: 1 },
-        },
-        'slide-down': {
-          '0%': { transform: 'translateY(-10px)', opacity: 0 },
-          '100%': { transform: 'translateY(0)', opacity: 1 },
-        },
-        'fade-in': {
-          '0%': { opacity: 0 },
-          '100%': { opacity: 1 },
-        },
-        progress: {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(100%)' },
-        },
-        matrix: {
-          '0%': { transform: 'translateY(0)' },
-          '100%': { transform: 'translateY(100%)' },
-        },
-      },
-      
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'cyber-grid': 'linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px)',
-        'scan-line': 'linear-gradient(to bottom, transparent 0%, rgba(0, 212, 255, 0.1) 50%, transparent 100%)',
-      },
-      
-      boxShadow: {
-        'neon': '0 0 5px theme("colors.neon.blue"), 0 0 20px theme("colors.neon.blue")',
-        'neon-lg': '0 0 10px theme("colors.neon.blue"), 0 0 40px theme("colors.neon.blue")',
-        'inner-glow': 'inset 0 0 20px rgba(0, 212, 255, 0.2)',
-      },
-      
-      backdropBlur: {
-        xs: '2px',
-      },
-      
-      transitionTimingFunction: {
-        'bounce-in': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-      },
-      
-      screens: {
-        '3xl': '1920px',
-      },
-      
-      zIndex: {
-        '60': '60',
-        '70': '70',
-        '80': '80',
-        '90': '90',
-        '100': '100',
       },
     },
   },

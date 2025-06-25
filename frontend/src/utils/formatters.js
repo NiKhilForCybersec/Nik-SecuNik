@@ -1,174 +1,226 @@
-import { format, formatDistance, formatRelative } from 'date-fns';
-import {
-  DocumentTextIcon,
-  DocumentIcon,
-  ArchiveBoxIcon,
-  GlobeAltIcon,
-  EnvelopeIcon,
-  ServerIcon,
-  CodeBracketIcon,
-  PhoneIcon,
-  CloudIcon,
-} from '@heroicons/react/24/outline';
+import { format, formatDistanceToNow, parseISO } from 'date-fns'
 
-/**
- * Format bytes to human readable format
- */
-export const formatBytes = (bytes, decimals = 2) => {
-  if (bytes === 0) return '0 Bytes';
-
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-};
-
-/**
- * Format date to various formats
- */
-export const formatDateTime = (date, formatStr = 'PPpp') => {
-  return format(new Date(date), formatStr);
-};
-
-export const formatDate = (date) => {
-  return format(new Date(date), 'PP');
-};
-
-export const formatTime = (date) => {
-  return format(new Date(date), 'p');
-};
+// Date formatting
+export const formatDate = (date, formatString = 'PPpp') => {
+  if (!date) return 'N/A'
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date
+    return format(dateObj, formatString)
+  } catch (error) {
+    console.error('Date formatting error:', error)
+    return 'Invalid Date'
+  }
+}
 
 export const formatRelativeTime = (date) => {
-  return formatDistance(new Date(date), new Date(), { addSuffix: true });
-};
-
-/**
- * Format duration in seconds to human readable format
- */
-export const formatDuration = (seconds) => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  const parts = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
-
-  return parts.join(' ');
-};
-
-/**
- * Format number with commas
- */
-export const formatNumber = (num) => {
-  return new Intl.NumberFormat().format(num);
-};
-
-/**
- * Format percentage
- */
-export const formatPercentage = (value, decimals = 1) => {
-  return `${(value * 100).toFixed(decimals)}%`;
-};
-
-/**
- * Truncate text with ellipsis
- */
-export const truncateText = (text, maxLength) => {
-  if (text.length <= maxLength) return text;
-  return text.substr(0, maxLength - 3) + '...';
-};
-
-/**
- * Get file icon based on file type
- */
-export const getFileIcon = (filename) => {
-  const ext = filename.split('.').pop().toLowerCase();
+  if (!date) return 'N/A'
   
-  const iconMap = {
-    // Logs
-    log: DocumentTextIcon,
-    txt: DocumentTextIcon,
-    syslog: DocumentTextIcon,
-    evtx: DocumentTextIcon,
-    evt: DocumentTextIcon,
-    
-    // Network
-    pcap: GlobeAltIcon,
-    pcapng: GlobeAltIcon,
-    cap: GlobeAltIcon,
-    netflow: GlobeAltIcon,
-    
-    // Archives
-    zip: ArchiveBoxIcon,
-    rar: ArchiveBoxIcon,
-    '7z': ArchiveBoxIcon,
-    tar: ArchiveBoxIcon,
-    gz: ArchiveBoxIcon,
-    
-    // Documents
-    pdf: DocumentIcon,
-    doc: DocumentIcon,
-    docx: DocumentIcon,
-    xls: DocumentIcon,
-    xlsx: DocumentIcon,
-    
-    // Email
-    eml: EnvelopeIcon,
-    msg: EnvelopeIcon,
-    mbox: EnvelopeIcon,
-    pst: EnvelopeIcon,
-    
-    // System
-    dd: ServerIcon,
-    e01: ServerIcon,
-    vmdk: ServerIcon,
-    vhd: ServerIcon,
-    
-    // Code
-    json: CodeBracketIcon,
-    xml: CodeBracketIcon,
-    csv: CodeBracketIcon,
-    yaml: CodeBracketIcon,
-    
-    // Mobile
-    logcat: PhoneIcon,
-    ips: PhoneIcon,
-    
-    // Cloud
-    cloudtrail: CloudIcon,
-    azurelog: CloudIcon,
-  };
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date
+    return formatDistanceToNow(dateObj, { addSuffix: true })
+  } catch (error) {
+    console.error('Relative time formatting error:', error)
+    return 'Invalid Date'
+  }
+}
 
-  return iconMap[ext] || DocumentIcon;
-};
+// File size formatting
+export const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return '0 Bytes'
+  
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
-/**
- * Get severity color class
- */
-export const getSeverityColor = (severity) => {
-  const colors = {
-    critical: 'text-red-500 bg-red-500/10',
-    high: 'text-orange-500 bg-orange-500/10',
-    medium: 'text-yellow-500 bg-yellow-500/10',
-    low: 'text-green-500 bg-green-500/10',
-    info: 'text-blue-500 bg-blue-500/10',
-  };
+// Number formatting
+export const formatNumber = (num) => {
+  if (num === null || num === undefined) return '0'
+  return num.toLocaleString()
+}
 
-  return colors[severity.toLowerCase()] || colors.info;
-};
+export const formatPercentage = (value, total) => {
+  if (!total || total === 0) return '0%'
+  return `${Math.round((value / total) * 100)}%`
+}
 
-/**
- * Format threat score
- */
+// Threat score formatting
 export const formatThreatScore = (score) => {
-  if (score >= 90) return { text: 'Critical', color: 'text-red-500' };
-  if (score >= 70) return { text: 'High', color: 'text-orange-500' };
-  if (score >= 50) return { text: 'Medium', color: 'text-yellow-500' };
-  if (score >= 30) return { text: 'Low', color: 'text-green-500' };
-  return { text: 'Info', color: 'text-blue-500' };
-};
+  if (score === null || score === undefined) return 'N/A'
+  return `${Math.round(score)}/100`
+}
+
+// Duration formatting
+export const formatDuration = (seconds) => {
+  if (!seconds || seconds === 0) return '0s'
+  
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`
+  } else {
+    return `${secs}s`
+  }
+}
+
+// Hash formatting (truncate long hashes)
+export const formatHash = (hash, length = 16) => {
+  if (!hash) return 'N/A'
+  if (hash.length <= length) return hash
+  return `${hash.substring(0, length)}...`
+}
+
+// IP address validation and formatting
+export const formatIPAddress = (ip) => {
+  if (!ip) return 'N/A'
+  
+  // Basic IP validation
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/
+  const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/
+  
+  if (ipv4Regex.test(ip) || ipv6Regex.test(ip)) {
+    return ip
+  }
+  
+  return ip // Return as-is if not a standard IP format
+}
+
+// URL formatting (truncate long URLs)
+export const formatURL = (url, maxLength = 50) => {
+  if (!url) return 'N/A'
+  if (url.length <= maxLength) return url
+  return `${url.substring(0, maxLength)}...`
+}
+
+// Severity level formatting
+export const formatSeverity = (severity) => {
+  if (!severity) return 'Unknown'
+  return severity.charAt(0).toUpperCase() + severity.slice(1).toLowerCase()
+}
+
+// Analysis status formatting
+export const formatAnalysisStatus = (status) => {
+  if (!status) return 'Unknown'
+  
+  const statusMap = {
+    'queued': 'Queued',
+    'processing': 'Processing',
+    'completed': 'Completed',
+    'failed': 'Failed',
+    'cancelled': 'Cancelled'
+  }
+  
+  return statusMap[status] || status
+}
+
+// File type formatting
+export const formatFileType = (type, subtype) => {
+  if (!type) return 'Unknown'
+  
+  if (subtype) {
+    return `${type.charAt(0).toUpperCase() + type.slice(1)} (${subtype})`
+  }
+  
+  return type.charAt(0).toUpperCase() + type.slice(1)
+}
+
+// IOC type formatting
+export const formatIOCType = (type) => {
+  if (!type) return 'Unknown'
+  
+  const typeMap = {
+    'ip_address': 'IP Address',
+    'domain': 'Domain',
+    'url': 'URL',
+    'hash': 'File Hash',
+    'email': 'Email',
+    'file_path': 'File Path',
+    'registry_key': 'Registry Key',
+    'mutex': 'Mutex',
+    'user_agent': 'User Agent'
+  }
+  
+  return typeMap[type] || type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
+
+// MITRE technique formatting
+export const formatMITRETechnique = (techniqueId, techniqueName) => {
+  if (!techniqueId) return 'Unknown'
+  
+  if (techniqueName) {
+    return `${techniqueId}: ${techniqueName}`
+  }
+  
+  return techniqueId
+}
+
+// Confidence score formatting
+export const formatConfidence = (confidence) => {
+  if (confidence === null || confidence === undefined) return 'N/A'
+  
+  if (confidence >= 0 && confidence <= 1) {
+    return `${Math.round(confidence * 100)}%`
+  }
+  
+  return `${Math.round(confidence)}%`
+}
+
+// Rule type formatting
+export const formatRuleType = (type) => {
+  if (!type) return 'Unknown'
+  
+  const typeMap = {
+    'yara': 'YARA',
+    'sigma': 'Sigma',
+    'custom': 'Custom'
+  }
+  
+  return typeMap[type] || type.toUpperCase()
+}
+
+// Error message formatting
+export const formatErrorMessage = (error) => {
+  if (!error) return 'Unknown error'
+  
+  if (typeof error === 'string') {
+    return error
+  }
+  
+  if (error.message) {
+    return error.message
+  }
+  
+  if (error.error && error.details) {
+    return `${error.error}: ${error.details}`
+  }
+  
+  return 'An unexpected error occurred'
+}
+
+// Progress formatting
+export const formatProgress = (current, total) => {
+  if (!total || total === 0) return '0%'
+  const percentage = Math.round((current / total) * 100)
+  return `${percentage}% (${current}/${total})`
+}
+
+// Tag formatting
+export const formatTags = (tags, maxTags = 3) => {
+  if (!tags || !Array.isArray(tags)) return []
+  
+  if (tags.length <= maxTags) {
+    return tags
+  }
+  
+  return [
+    ...tags.slice(0, maxTags),
+    `+${tags.length - maxTags} more`
+  ]
+}

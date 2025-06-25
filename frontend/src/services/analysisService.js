@@ -1,78 +1,68 @@
-import api, { apiHelpers } from './api';
-import { API_ENDPOINTS } from '@/utils/constants';
+import apiClient from './api'
 
-class AnalysisService {
-  /**
-   * Start a new analysis
-   */
-  async startAnalysis(fileHash, options = {}) {
-    const response = await api.post(API_ENDPOINTS.ANALYSIS_START, {
-      file_hash: fileHash,
-      ...options,
-    });
-    return response.data;
-  }
+export const analysisService = {
+  // Start analysis
+  async startAnalysis(fileId, options = {}) {
+    try {
+      const response = await apiClient.post('/analysis/start', {
+        file_id: fileId,
+        analyzers: options.analyzers || ['yara', 'sigma', 'mitre', 'ai'],
+        priority: options.priority || 'normal',
+        options: {
+          deep_scan: options.deepScan || true,
+          extract_iocs: options.extractIocs || true,
+          correlation: options.correlation || true,
+          ...options.analysisOptions
+        }
+      })
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Get analysis status
-   */
+  // Check analysis status
   async getAnalysisStatus(analysisId) {
-    const response = await api.get(`${API_ENDPOINTS.ANALYSIS_STATUS}/${analysisId}`);
-    return response.data;
-  }
+    try {
+      const response = await apiClient.get(`/analysis/${analysisId}/status`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Get analysis results
-   */
+  // Get analysis results
   async getAnalysisResults(analysisId) {
-    const response = await api.get(`${API_ENDPOINTS.ANALYSIS_RESULTS}/${analysisId}`);
-    return response.data;
-  }
+    try {
+      const response = await apiClient.get(`/analysis/${analysisId}/results`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Export analysis results
-   */
-  async exportAnalysis(analysisId, format = 'pdf') {
-    const filename = `analysis_${analysisId}_${Date.now()}.${format}`;
-    await apiHelpers.downloadFile(
-      `${API_ENDPOINTS.ANALYSIS_EXPORT}/${analysisId}?format=${format}`,
-      filename
-    );
-  }
-
-  /**
-   * Get analysis by file hash
-   */
-  async getAnalysisByHash(fileHash) {
-    const response = await api.get(`${API_ENDPOINTS.ANALYSIS}/hash/${fileHash}`);
-    return response.data;
-  }
-
-  /**
-   * Cancel running analysis
-   */
+  // Cancel analysis
   async cancelAnalysis(analysisId) {
-    const response = await api.post(`${API_ENDPOINTS.ANALYSIS}/${analysisId}/cancel`);
-    return response.data;
-  }
+    try {
+      const response = await apiClient.post(`/analysis/${analysisId}/cancel`)
+      return response.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  },
 
-  /**
-   * Re-run analysis
-   */
-  async rerunAnalysis(analysisId, options = {}) {
-    const response = await api.post(`${API_ENDPOINTS.ANALYSIS}/${analysisId}/rerun`, options);
-    return response.data;
-  }
-
-  /**
-   * Get analysis statistics
-   */
-  async getAnalysisStats(timeRange = '7d') {
-    const response = await api.get(`${API_ENDPOINTS.ANALYSIS}/stats?range=${timeRange}`);
-    return response.data;
+  handleError(error) {
+    if (error.response?.data) {
+      return {
+        error: error.response.data.error || 'Analysis failed',
+        message: error.response.data.message || 'An error occurred during analysis',
+        details: error.response.data.details || {}
+      }
+    }
+    return {
+      error: 'NetworkError',
+      message: 'Failed to connect to server',
+      details: {}
+    }
   }
 }
-
-// Create and export singleton instance
-const analysisService = new AnalysisService();
-export { analysisService };
